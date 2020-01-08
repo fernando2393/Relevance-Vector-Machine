@@ -28,31 +28,54 @@ def recalculate_alphas_function(alpha, gamma, mu):
     return new_alphas
 
 
+def phi_function(x):
+    phi = np.ones((x.shape[0], x.shape[0] + 1))
+
+    for m in range(x.shape[0]):
+        for n in range(1, x.shape[0]):
+            phi[m][n] = Kernel.radial_basis_kernel(x[n, :], x[m, :])
+    return phi
+
+
 # Before formula 23
 def sigmoid_function(y):
     denominator = 1 + math.exp(-y)
     return 1 / denominator
 
 
-def phi_function(x):
-    phi = np.ones((x.shape[0], x.shape[0] + 1))
-    for m in range(x.shape[0]):
-        for n in range(1, x.shape[0] + 1):
-            phi[m][n] = Kernel.gaussian_kernel(x[m], x[n])
-    return phi
+# Formula 2
+def y_function(weight, x):
+    w0 = weight[0]
+    y = np.zeros(x.shape[0])
+    for n in range(x.shape[0]):
+        num = 0
+        for k in range(len(weight)):
+            # for m in range(n, x.shape[0]):
+            num += weight[k] * Kernel.radial_basis_kernel(x, x[n, :])
+        y[n] = np.add(num, w0)
+    return y
 
 
 # From under formula 25
-def beta_matrix_function(y):
-    beta_matrix = np.zeros((len(y), len(y)))
-    for i in range(len(y)):
-        beta_matrix[i][i] = sigmoid_function(y[i]) * (1 - sigmoid_function(y[i]))
+def beta_matrix_function(y, N):
+    beta_matrix = np.zeros((N, N))
+    for n in range(N):
+        beta_matrix[n][n] = sigmoid_function(y[n]) * (1 - sigmoid_function(y[n]))
     return beta_matrix
 
 
 # Formula 26
 def sigma_function(phi, beta, alpha):
-    return np.linalg.inv(phi.T * beta * phi + alpha)
+    print(phi.shape)
+    print(beta.shape)
+    print(alpha.shape)
+    a = np.dot(beta, phi)
+    b = np.dot(phi.T, a)
+    print(a.shape)
+    print("b")
+    print(b.shape)
+    final = b + alpha
+    return np.linalg.inv(final)
 
 
 # Formula 27
@@ -70,19 +93,6 @@ def log_posterior_function(x, weight, target):
     return posterior
 
 
-# Formula 2
-def y_function(weight, x):
-    w0 = weight[0]
-    y = np.zeros((x.shape[0], len(weight)))
-    for k in range(len(weight)):
-        num = 0
-        for n in range(x.shape[0]):
-            for n2 in range(n, x.shape[0]):
-                num += weight * Kernel.gaussian_kernel(x[n, :], x[n2, :])
-            y[n][k] = num + w0
-    return y
-
-
 def run():
     """
         Runs the classification
@@ -97,15 +107,13 @@ def train(data, target):
     threshold = 0.0001
 
     old_log_posterior = float("-inf")
-    weights = [1 / data.shape[1]] * data.shape[1]   # Initialize uniformly
-    alpha = [1 / data.shape[1]] * data.shape[1]
+    weights = np.array([1 / (data.shape[0]+1)] * (data.shape[0]+1))  # Initialize uniformly
+    alpha = np.array([1 / (data.shape[0]+1)] * (data.shape[0]+1))
     for i in range(max_training_iterations):
-
+        print("1")
         y = y_function(weights, data)
-        beta = beta_matrix_function(y)
-
+        beta = beta_matrix_function(y, data.shape[0])
         phi = phi_function(data)
-
         sigma = sigma_function(phi, beta, alpha)
 
         gamma = gamma_function(alpha, sigma)

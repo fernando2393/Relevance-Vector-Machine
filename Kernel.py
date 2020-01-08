@@ -20,8 +20,8 @@ def radial_basis_kernel(vector_x, vector_y):
 
 # From 4.2
 def gaussian_kernel(vector_x, vector_y):
-    r = 0.5  # Width of the parameter, 0.5 was used in the paper
-    return math.exp(-(r ** -2) * np.linalg.norm(vector_x, vector_y))
+    r = 0.5  # Width of the     parameter, 0.5 was used in the paper
+    return math.exp(-(r ** -2) * np.linalg.norm(vector_x, vector_y.T))
 
 
 # KernelFunction = linear_kernel
