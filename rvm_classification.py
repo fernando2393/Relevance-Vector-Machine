@@ -32,8 +32,8 @@ def phi_function(x):
     phi = np.ones((x.shape[0], x.shape[0] + 1))
 
     for m in range(x.shape[0]):
-        for n in range(1, x.shape[0]):
-            phi[m][n] = Kernel.radial_basis_kernel(x[n, :], x[m, :])
+        for n in range(x.shape[0]):
+            phi[m][n+1] = Kernel.radial_basis_kernel(x[n, :], x[m, :])
     return phi
 
 
@@ -57,39 +57,50 @@ def y_function(weight, x):
 
 
 # From under formula 25
-def beta_matrix_function(y, N):
+def beta_matrix_function(y, N, target):
     beta_matrix = np.zeros((N, N))
     for n in range(N):
-        beta_matrix[n][n] = sigmoid_function(y[n]) * (1 - sigmoid_function(y[n]))
+        beta_matrix[n][n] = np.power(sigmoid_function(y[n]), target[n]) * np.power((1 - sigmoid_function(y[n])), (1-target[n]))
+    #print(beta_matrix)
     return beta_matrix
 
 
 # Formula 26
 def sigma_function(phi, beta, alpha):
-    print(phi.shape)
-    print(beta.shape)
-    print(alpha.shape)
-    a = np.dot(beta, phi)
-    b = np.dot(phi.T, a)
-    print(a.shape)
+    print("phi")
+    print(phi)
+    print("beta")
+    print(beta)
+    b = np.dot(phi.T, np.dot(beta, phi))
     print("b")
-    print(b.shape)
+    print(b)
+    # print("alpha")
+    # print(alpha)
     final = b + alpha
+
     return np.linalg.inv(final)
 
 
 # Formula 27
 def update_weight_function(sigma, phi, beta, target):
-    return sigma * phi.T * beta * target
+    print("sigma")
+    print(sigma)
+    # print("phi")
+    # print(phi.T)
+    # print("beta")
+    # print(beta)
+    # print("target")
+    # print(target)
+    return np.dot(sigma, np.dot(phi.T , np.dot(beta , target)))
 
 
 # Formula 28 and
 def log_posterior_function(x, weight, target):
     posterior = 0
+    y = y_function(weight, x)
     for n in range(x.shape[0]):
-        for k in range(len(weight)):
-            y = y_function(weight, x)
-            posterior += target[n][k] * np.log(sigmoid_function(y[n][k]))
+        #for k in range(target.shape[1]):
+        posterior += target[n] * np.log(sigmoid_function(y[n]))
     return posterior
 
 
@@ -112,17 +123,30 @@ def train(data, target):
     for i in range(max_training_iterations):
         print("1")
         y = y_function(weights, data)
-        beta = beta_matrix_function(y, data.shape[0])
+        print(y.shape)
+
+        print(data.shape)
+
+        beta = beta_matrix_function(y, data.shape[0], target)
+        print(beta.shape)
+
         phi = phi_function(data)
+        print(phi.shape)
+        
         sigma = sigma_function(phi, beta, alpha)
+        print(sigma.shape)
 
         gamma = gamma_function(alpha, sigma)
+        print(gamma.shape)
 
         mu = mu_function(beta, sigma, phi, target)
+        print(mu.shape)
 
         alpha = recalculate_alphas_function(alpha, gamma, mu)
+        print(weights.shape)
 
         weights = update_weight_function(sigma, phi, beta, target)
+        print(weights.shape)
 
         log_posterior = log_posterior_function(data, weights, target)
 
