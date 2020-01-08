@@ -34,6 +34,14 @@ def sigmoid_function(y):
     return 1 / denominator
 
 
+def phi_function(x):
+    phi = np.ones((x.shape[0], x.shape[0] + 1))
+    for m in range(x.shape[0]):
+        for n in range(1, x.shape[0] + 1):
+            phi[m][n] = Kernel.gaussian_kernel(x[m], x[n])
+    return phi
+
+
 # From under formula 25
 def beta_matrix_function(y):
     beta_matrix = np.zeros((len(y), len(y)))
@@ -76,4 +84,42 @@ def y_function(weight, x):
 
 
 def run():
-    print("hi")
+    """
+        Runs the classification
+    """
+
+
+def train(data, target):
+    """
+     Train the classifier
+    """
+    max_training_iterations = 10000
+    threshold = 0.0001
+
+    old_log_posterior = float("-inf")
+    weights = [1 / data.shape[1]] * data.shape[1]   # Initialize uniformly
+    alpha = [1 / data.shape[1]] * data.shape[1]
+    for i in range(max_training_iterations):
+
+        y = y_function(weights, data)
+        beta = beta_matrix_function(y)
+
+        phi = phi_function(data)
+
+        sigma = sigma_function(phi, beta, alpha)
+
+        gamma = gamma_function(alpha, sigma)
+
+        mu = mu_function(beta, sigma, phi, target)
+
+        alpha = recalculate_alphas_function(alpha, gamma, mu)
+
+        weights = update_weight_function(sigma, phi, beta, target)
+
+        log_posterior = log_posterior_function(data, weights, target)
+
+        difference = log_posterior - old_log_posterior
+        if difference <= threshold:
+            print("Training done, it converged")
+            break
+        old_log_posterior = log_posterior
