@@ -1,1 +1,4 @@
-print("Hello world")
+import rvm_classification
+
+
+classification = rvm_classification.run()
