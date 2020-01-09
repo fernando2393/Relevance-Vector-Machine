@@ -1,28 +1,30 @@
 import numpy as np
 
 # Constants definition
-CONVERGENCE = 0.001
+CONVERGENCE = 1e-9
 SEED = 42
 PRUNNING_THRESHOLD = 1e6
 np.random.seed(SEED)
 
 def initializeAlpha(N):
     # Initialization of alpha assuming uniform scale priors
-    # a = pow(10,-4)
-    # b = pow(10,-4)
-    return np.full(N+1,1e-4)
+    return np.array([np.full(N+1,1e-4),np.arange(0,N+1,1)])
 
-def kernel(x_m, x_n):
-    return 1 + x_m * x_n + x_m * x_n * min(x_m, x_n) - ((x_m + x_n) / 2) * pow(min(x_m, x_n), 2) + pow(min(x_m, x_n), 3) / 3
+def kernel(x_m, x_n, kernel_type):
+    if kernel_type == "linear_spline":
+        compute_kernel = 1 + x_m * x_n + x_m * x_n * min(x_m, x_n) - ((x_m + x_n) / 2) * pow(min(x_m, x_n), 2) + pow(min(x_m, x_n), 3) / 3
+    '''elif kernel_type == "exponential":
+        compute_kernel = '''
+    return compute_kernel
 
-def calculateBasisFunction(X):
+def calculateBasisFunction(X, kernel_type):
     basis_mat = np.zeros((len(X), len(X) + 1))
     for i in range(basis_mat.shape[0]):
         for j in range(basis_mat.shape[1]):
             if j == 0:
                 basis_mat[i,j] = 1
             else:    
-                basis_mat[i,j] = kernel(X[i], X[j-1]) # Starting in i-1 because mat is N+1 length 
+                basis_mat[i,j] = kernel(X[i], X[j-1], kernel_type) # Starting in i-1 because mat is N+1 length 
     return basis_mat
 
 def calculateA(alpha):
@@ -36,6 +38,7 @@ def calculateMu(variance, Sigma, Basis, targets):
 
 def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis):
     # Update gammas
+    
     gamma = np.zeros(len(alpha_old))
     for i in range(len(gamma)):
         gamma[i] = 1 - alpha_old[i] * Sigma[i,i]
@@ -51,35 +54,34 @@ def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis):
     return alpha, variance
 
 def computeProbability(targets, variance, Basis, A):
-    #aux1 = np.linalg.inv(A)
+    # Compute the Log Likelihood
     mat = variance * np.identity(len(targets)) + np.dot(np.dot(Basis, np.linalg.inv(A)), np.transpose(Basis))
-    #exponent = -1/2 * np.dot(np.transpose(targets), np.dot(np.linalg.inv(mat), targets))
-    #result = pow(2 * np.pi, -len(targets)/2) * pow(np.linalg.det(mat), -1/2) * np.exp(exponent)
     result = -1/2 * np.log(np.linalg.det(mat) + np.dot(np.transpose(targets), np.dot(np.linalg.inv(mat), targets)))
     return result
 
 def prunning(alpha, Basis):
     index = []
-    for i in range(len(alpha)):
-        if (alpha[i] > PRUNNING_THRESHOLD):
+    for i in range(len(alpha[0])):
+        if (alpha[0][i] > PRUNNING_THRESHOLD):
             index.append(i)
-    alpha = np.delete(alpha, index)
+
+    alpha = np.delete(alpha, index, 1)
     Basis = np.delete(Basis, index, 1)
     return alpha, Basis
 
-def fit(X, variance, targets):
+def fit(X, variance, targets, kernel, N):
     previous_prob = float('inf')
     prob = 0
-    alpha = initializeAlpha(len(X))
-    Basis = calculateBasisFunction(X)
-    A = calculateA(alpha)
+    alpha = initializeAlpha(N)
+    Basis = calculateBasisFunction(X, kernel)
+    A = calculateA(alpha[0])
     sigma = calculateSigma(variance, Basis, A)
     mu = calculateMu(variance, sigma, Basis, targets)
     cnt = 0
     while (True):
-        alpha, variance = updateHyperparameters(sigma, alpha, mu, targets, Basis)
+        alpha[0], variance = updateHyperparameters(sigma, alpha[0], mu, targets, Basis)
         alpha, Basis = prunning(alpha, Basis)
-        A = calculateA(alpha)
+        A = calculateA(alpha[0])
         sigma = calculateSigma(variance, Basis, A)
         mu = calculateMu(variance, sigma, Basis, targets)
         prob = computeProbability(targets, variance, Basis, A)
@@ -88,10 +90,12 @@ def fit(X, variance, targets):
         previous_prob = prob
         cnt += 1
     print("Iterations:", cnt)
-    return alpha, variance, mu, sigma, Basis
+    return alpha, variance, mu, sigma
 
-def predict(X_test, alpha, variance, mu, sigma, Basis):
+def predict(X_test, relevant_vectors, variance, mu, sigma, kernel):
     targets_predict = np.zeros(len(X_test))
+    Basis = calculateBasisFunction(X_test, kernel)
+    Basis = Basis[:,relevant_vectors]
     for i in range(len(X_test)):
         mean = np.dot(np.transpose(mu), Basis[i])
         var = variance + np.dot(np.dot(np.transpose(Basis[i]), sigma), Basis[i])

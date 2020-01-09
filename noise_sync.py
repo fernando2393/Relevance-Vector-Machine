@@ -2,31 +2,38 @@ import numpy as np
 import math
 import rvm_regression as rvm_r
 import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
 
-
-X = np.linspace(-10,10,100) # Training
+# Initialize variable
+N = 100
+X = np.linspace(-10,10,N) # Training
 variance = 0.01
+
+# Choose kernel between linear_spline or exponential
+kernel = "linear_spline"
+
 #----- Case 1 -----#
 
-#aux = [np.random.normal(0, pow(variance,2)) for i in range(1000)]
 targets = np.zeros(len(X))
+y = np.zeros(len(X))
 for i in range(len(X)):
-    targets[i] = math.sin(X[i])/X[i] + np.random.normal(0, pow(variance,2))
+    y[i] =  math.sin(X[i]) / X[i]
+    targets[i] = math.sin(X[i]) / X[i] + np.random.uniform(-0.2, 0.2)
 
-alpha, variance_mp, mu_mp, sigma_mp, Basis_mp = rvm_r.fit(X, variance, targets)
-X_test = np.linspace(-10,10,100) # Test
-prediction = rvm_r.predict(X_test, alpha, variance_mp, mu_mp, sigma_mp, Basis_mp)
-#print("Predicted:", prediction)
-plt.scatter(X, targets)
-plt.scatter(X_test, prediction)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X, variance, targets, kernel, N)
+
+X_test = np.linspace(-10,10,N) # Test
+relevant_vectors = alpha[1].astype(int)
+prediction = rvm_r.predict(X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel)
+
+print('RMSE:', np.sqrt(mean_squared_error(prediction, targets)))
+
+plt.plot(X_test, prediction, c='r', label='Predicted values')
+plt.scatter(X, targets, label='Training samples')
+plt.plot(X, y, c='b', label='True function')
+plt.scatter(X[relevant_vectors[:-1]], targets[relevant_vectors[:-1]], c='black', marker='+', s=500)
+plt.xlabel('X')
+plt.ylabel('Target')
+plt.legend()
+plt.title('sinc(x) dataset with noise')
 plt.show()
-
-#----- Case 2 -----#
-"""
-aux += np.random.uniform(-0.1, 0.1, 100)
-targets = np.zeros(len(X))
-for i in range(len(X)):
-    targets[i] = math.sin(X[i])/X[i] + (1/1000) * np.sum(aux)
-
-X_test = np.linspace(-10,10,100) # Test
-"""
