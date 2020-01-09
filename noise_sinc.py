@@ -13,8 +13,6 @@ N_test = 1000
 X = np.linspace(-10,10,N) # Training
 X_test = np.linspace(-10,10, N_test) # Test
 variance = 0.01
-#seed = 22
-#np.random.seed(seed)
 tests = 100
 pred_array = list() # Average regression
 
@@ -36,7 +34,7 @@ for it in tqdm(range(tests)):
     for i in range(N_test):
         targets_test[i] = math.sin(X_test[i]) / X_test[i] + np.random.uniform(-0.2, 0.2)
         y[i] =  math.sin(X_test[i]) / X_test[i]
-    pred_array.append(rvm_r.predict(X, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel))
+    pred_array.append(rvm_r.predict(X, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions))
 pred_mean = np.array(pred_array).mean(axis=0)
 print('RMSE:', sqrt(mean_squared_error(y, pred_mean)))
 

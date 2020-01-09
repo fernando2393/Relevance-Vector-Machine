@@ -2,24 +2,24 @@ import numpy as np
 
 # Constants definition
 CONVERGENCE = 1e-10
-PRUNNING_THRESHOLD = 1e6
+PRUNNING_THRESHOLD = 1e3
 
 def initializeAlpha(N):
     # Initialization of alpha assuming uniform scale priors
     return np.array([np.full(N+1,1e-4),np.arange(0,N+1,1)])
 
 def kernel(x_m, x_n, kernel_type):
-    if kernel_type == "linear_spline":
-        compute_kernel = 1 + x_m * x_n + x_m * x_n * min(x_m, x_n) - ((x_m + x_n) / 2) * pow(min(x_m, x_n), 2) + pow(min(x_m, x_n), 3) / 3
-    '''elif kernel_type == "exponential":
-        compute_kernel = '''
+    if (kernel_type == "linear_spline"):
+        compute_kernel = 1 + x_m * x_n + x_m * x_n * np.minimum(x_m, x_n) - ((x_m + x_n) / 2) * pow(np.minimum(x_m, x_n), 2) + pow(np.minimum(x_m, x_n), 3) / 3
+    elif (kernel_type == "rbf"):
+        compute_kernel = rbf_kernel(x_m, x_n, 0.01)
         
-    return compute_kernel
+    return compute_kernel.mean()
 
 def calculateBasisFunction(X, kernel_type):
     Basis = np.zeros((X.shape[0], X.shape[0]))
-    for i in range(X.shape[0]):
-        for j in range(X.shape[0]):
+    for i in range(Basis.shape[0]):
+        for j in range(Basis.shape[1]):
             Basis[i,j] = kernel(X[i], X[j], kernel_type)
 
     weight_0 = np.ones((X.shape[0],1))
@@ -92,14 +92,14 @@ def fit(X, variance, targets, kernel, N):
     print("Iterations:", cnt)
     return alpha, variance, mu, sigma
 
-def predict(X_train, X_test, relevant_vectors, variance, mu, sigma, kernel_type):
+def predict(X_train, X_test, relevant_vectors, variance, mu, sigma, kernel_type, dimensions):
     targets_predict = np.zeros(len(X_test))
-    X_samples = np.zeros(len(relevant_vectors)-1)
+    X_samples = np.zeros((len(relevant_vectors)-1, dimensions))
     
     for i in range(1,len(relevant_vectors)):
         X_samples[i-1] = X_train[relevant_vectors[i]-1]
     
-    Basis = np.zeros((len(X_test), len(X_samples)+1))
+    Basis = np.zeros((len(X_test), X_samples.shape[0]+1))
     for i in range(len(X_test)):
         for j in range(len(X_samples)+1):
             if (j == 0):

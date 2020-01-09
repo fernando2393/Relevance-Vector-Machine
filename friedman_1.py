@@ -9,16 +9,16 @@ from tqdm import tqdm
 # Initialize variable
 N = 240
 N_pred = 1000
-N_dimensions = 10
+dimensions = 10
 variance = 0.01
 tests = 100
 
 # Choose kernel between linear_spline or exponential
 kernel = "linear_spline"
 
-X_train = np.zeros((N, N_dimensions)) # Training
+X_train = np.zeros((N, dimensions)) # Training
 for i in range(N):
-    for j in range(N_dimensions):
+    for j in range(dimensions):
         X_train[i,j] = np.random.rand()
 
 target_train = (10*np.sin(np.pi*X_train[:,0]*X_train[:,1])
@@ -30,14 +30,14 @@ target_train = (10*np.sin(np.pi*X_train[:,0]*X_train[:,1])
 
 X_pred_mean = []
 for i in range(tests):
-    X_pred = np.zeros((N_pred, N_dimensions)) # Test Prediction
+    X_pred = np.zeros((N_pred, dimensions)) # Test Prediction
     for j in range(N_pred):
-        for k in range(N_dimensions):
+        for k in range(dimensions):
             X_pred[j,k] = np.random.rand()
     
     X_pred_mean.append(X_pred)
 
-X_pred = np.zeros((N_pred, N_dimensions)) # Test Prediction
+X_pred = np.zeros((N_pred, dimensions)) # Test Prediction
 for i in range(N_pred):
     X_pred[i,:] = X_pred_mean[:][0].mean(axis=0)
 
@@ -52,7 +52,7 @@ alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, target_train,
 relevant_vectors = alpha[1].astype(int)
 
 # Predict
-target_pred = rvm_r.predict(X_train, X_pred, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel)
+target_pred = rvm_r.predict(X_train, X_pred, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions)
 
 # Check Performance
 print('RMSE:', sqrt(mean_squared_error(true_target, target_pred)))
