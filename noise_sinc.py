@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 # Initialize variable
 N = 100
+dimensions = 1
 N_test = 1000 
 X = np.linspace(-10,10,N) # Training
 X_test = np.linspace(-10,10, N_test) # Test
@@ -28,7 +29,7 @@ y = np.zeros(N_test)
 for i in range(len(X)):
     targets[i] = math.sin(X[i]) / X[i] + np.random.uniform(-0.2, 0.2)
 
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X, variance, targets, kernel, N)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(np.reshape(X,(N,dimensions)), variance, targets, kernel, N)
 relevant_vectors = alpha[1].astype(int)
 
 for it in tqdm(range(tests)):

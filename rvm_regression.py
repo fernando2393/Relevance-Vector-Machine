@@ -13,17 +13,19 @@ def kernel(x_m, x_n, kernel_type):
         compute_kernel = 1 + x_m * x_n + x_m * x_n * min(x_m, x_n) - ((x_m + x_n) / 2) * pow(min(x_m, x_n), 2) + pow(min(x_m, x_n), 3) / 3
     '''elif kernel_type == "exponential":
         compute_kernel = '''
+        
     return compute_kernel
 
 def calculateBasisFunction(X, kernel_type):
-    basis_mat = np.zeros((len(X), len(X) + 1))
-    for i in range(basis_mat.shape[0]):
-        for j in range(basis_mat.shape[1]):
-            if j == 0:
-                basis_mat[i,j] = 1
-            else:    
-                basis_mat[i,j] = kernel(X[i], X[j-1], kernel_type) # Starting in i-1 because mat is N+1 length 
-    return basis_mat
+    Basis = np.zeros((X.shape[0], X.shape[0]))
+    for i in range(X.shape[0]):
+        for j in range(X.shape[0]):
+            Basis[i,j] = kernel(X[i], X[j], kernel_type)
+
+    weight_0 = np.ones((X.shape[0],1))
+    Basis = np.hstack((weight_0, Basis))
+
+    return Basis
 
 def calculateA(alpha):
     return alpha * np.identity(len(alpha))

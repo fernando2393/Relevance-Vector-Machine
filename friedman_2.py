@@ -10,6 +10,7 @@ num_iterations = 100
 training_samples = 240
 test_samples = 1000
 dimensions = 4
+variance = 0.01
 
 # Choose kernel between linear_spline or exponential
 kernel = "linear_spline"
@@ -32,7 +33,7 @@ for i in range(training_samples):
     # Adding noise
     training_targets[i] += np.random.normal(0, training_targets[i]/3)
 
-# alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_training, variance, training_targets, kernel, training_samples)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_training, variance, training_targets, kernel, training_samples)
 
 # Generation of testing
 # testing_targets = np.zeros(test_samples)
