@@ -92,7 +92,6 @@ def fit(X, variance, targets, kernel, N):
 
 def predict(X_train, X_test, relevant_vectors, variance, mu, sigma, kernel_type):
     targets_predict = np.zeros(len(X_test))
-    print(relevant_vectors)
     X_samples = np.zeros(len(relevant_vectors)-1)
     
     for i in range(1,len(relevant_vectors)):
