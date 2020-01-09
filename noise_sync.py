@@ -8,12 +8,13 @@ from sklearn.metrics import mean_squared_error
 N = 100
 X = np.linspace(-10,10,N) # Training
 variance = 0.01
+seed = 22
+np.random.seed(seed)
 
 # Choose kernel between linear_spline or exponential
 kernel = "linear_spline"
 
 #----- Case 1 -----#
-
 targets = np.zeros(len(X))
 y = np.zeros(len(X))
 for i in range(len(X)):
@@ -30,8 +31,8 @@ print('RMSE:', np.sqrt(mean_squared_error(prediction, targets)))
 
 plt.plot(X_test, prediction, c='r', label='Predicted values')
 plt.scatter(X, targets, label='Training samples')
-plt.plot(X, y, c='b', label='True function')
-plt.scatter(X[relevant_vectors[:-1]], targets[relevant_vectors[:-1]], c='black', marker='+', s=500)
+plt.plot(X, y, c='black', label='True function')
+plt.scatter(X[relevant_vectors[:-1]], targets[relevant_vectors[:-1]], c='r', marker='*', s=100)
 plt.xlabel('X')
 plt.ylabel('Target')
 plt.legend()

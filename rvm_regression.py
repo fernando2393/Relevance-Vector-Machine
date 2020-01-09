@@ -1,10 +1,8 @@
 import numpy as np
 
 # Constants definition
-CONVERGENCE = 1e-9
-SEED = 42
+CONVERGENCE = 1e-10
 PRUNNING_THRESHOLD = 1e6
-np.random.seed(SEED)
 
 def initializeAlpha(N):
     # Initialization of alpha assuming uniform scale priors
