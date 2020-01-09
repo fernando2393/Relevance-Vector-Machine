@@ -17,12 +17,12 @@ import numpy as np
 
 # Same as the people
 test_data = np.loadtxt("datasets/ripley_test_data.asc")
-test_taraget = np.loadtxt("datasets/ripley_test_labels.asc")
+test_target = np.loadtxt("datasets/ripley_test_labels.asc")
 
 train_data = np.loadtxt("datasets/ripley_train_data.asc")
-train_taraget = np.loadtxt("datasets/ripley_train_labels.asc")
+train_target = np.loadtxt("datasets/ripley_train_labels.asc")
 
 classifier = rvm_classification.RVM_Classifier()
-classifier.train(train_data, train_taraget)
+classifier.train(train_data, train_target)
 # classifier.predict(test_data)
-classifier.plot(test_data, test_taraget)
+classifier.plot(test_data, test_target)
