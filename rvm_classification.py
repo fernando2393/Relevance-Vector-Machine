@@ -12,6 +12,7 @@ class RVM_Classifier():
 
     def __init__(self):
         self.trained_weights = None
+        self.relevance_vec = None
 
     # Formula 27
     def update_weight_function(self, sigma, phi, beta, target):
@@ -34,21 +35,30 @@ class RVM_Classifier():
     def phi_function(self, x):
         phi = np.ones((x.shape[0], x.shape[0] + 1))
 
-        for m in range(x.shape[0]):
-            for n in range(x.shape[0]):
-                phi[m][n + 1] = Kernel.radial_basis_kernel(x[n, :], x[m, :])
+        for n in range(x.shape[0]):
+            for m in range(x.shape[0]):
+                phi[n][m + 1] = Kernel.radial_basis_kernel(x[n, :], x[m, :])
+        return phi
+
+
+    def phi_function_2(self, x):
+        phi = np.ones((x.shape[0], self.relevance_vec.shape[0] + 1))
+
+        for n in range(x.shape[0]):
+            for m in range(self.relevance_vec.shape[0]):
+                phi[n][m + 1] = Kernel.radial_basis_kernel(x[n, :], self.relevance_vec[m, :])
         return phi
 
     # Formula 2
     def y_function(self, weight, x, phi):
-        w0 = weight[0]
+        w0 = weight[0]  # TODO we dont use this anymore
         y = np.zeros(x.shape[0])
         # phi_sum = np.sum(phi,axis=1)
         # for n in range(x.shape[0]):
         # for m in range(n, x.shape[0]):
         #    y[n] += weight[n+1]*phi_sum[n]
         test = np.dot(phi, weight)
-        y = expit(test)
+        y = expit(test)  # Sigmoid function
 
         return y
 
@@ -105,7 +115,7 @@ class RVM_Classifier():
     # def plot(self, data, data_index_target_list):
     def plot(self, data, target):
         # Format data so we can plot it
-        print("Will start plotting fucntion")
+        print("Will start plotting")
         target_values = np.unique(target)
         data_index_target_list = [0] * len(target_values)
         for i, c in enumerate(target_values):  # Saving the data index with its corresponding target
@@ -120,18 +130,20 @@ class RVM_Classifier():
 
         # Plot the decision boundary. For that, we will assign a color to each
         # point in the mesh [x_min, m_max]x[y_min, y_max].
+        print("Calculating the prediction, this might take a while...")
         data_mesh = np.c_[xx.ravel(), yy.ravel()]
-        # Z = self.predict(data_mesh)
+        Z = self.predict(data_mesh)
+        # Z = self.predict(data)
 
         # Put the result into a color plot
-        # Z = Z.reshape(xx.shape)
+        Z = Z.reshape(xx.shape)
 
         colors = ["bo", "go", "ro", "co", "mo", "yo", "bo", "wo"]
-        # plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(12, 6))
         plt.title('Banana dataset')
         for i, c in enumerate(data_index_target_list):
             plt.plot(data[c[1], 0], data[c[1], 1], colors[i], label="Target: " + str(c[0]))
-        # plt.contour(xx, yy, Z, cmap=plt.cm.Paired)
+        plt.contour(xx, yy, Z, cmap=plt.cm.Paired)
         plt.xlabel("Cool label, what should we put here")
         plt.ylabel("Heelloooo lets goo")
         plt.legend()
@@ -141,9 +153,9 @@ class RVM_Classifier():
         """
             Runs the classification
         """
-        phi = self.phi_function(data)
-        estimations = self.y_function(self.trained_weights, data, phi)
-        y = np.array([expit(y) for y in estimations])
+        phi = self.phi_function_2(data)
+        y = self.y_function(self.trained_weights, data, phi)
+        # y = np.array([expit(y) for y in estimations])
         pred = np.where(y > 0.5, 1, -1)
         return pred
 
@@ -151,6 +163,7 @@ class RVM_Classifier():
         """
          Train the classifier
         """
+        self.relevance_vec = data
         max_training_iterations = 100
         threshold = 0.0000000000001
 
