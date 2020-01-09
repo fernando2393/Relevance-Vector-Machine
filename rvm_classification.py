@@ -1,5 +1,7 @@
 import math
+import sys
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import  expit
 
@@ -25,7 +27,7 @@ def gamma_function(alpha, sigma):
 def recalculate_alphas_function(alpha, gamma, weight):
     new_alphas = np.zeros(len(alpha))
     for i in range(len(gamma)):
-        new_alphas[i] = gamma[i] / (weight[i] ** 2)
+        new_alphas[i] = gamma[i] / (weight[i] ** 2 + sys.float_info.epsilon)
     return new_alphas
 
 
@@ -112,10 +114,35 @@ def prune(self):
         
 
 
-def run():
+def plot(data, data_index_target_list):
+    colors = ["bo", "go", "ro", "co", "mo", "yo", "bo", "wo"]
+    fig = plt.figure(figsize=(10, 6))
+    plt.title('Banana dataset')
+    for i, c in enumerate(data_index_target_list):
+        plt.plot(data[c[1], 0], data[c[1], 1], colors[i], label="Target: " + str(c[0]))
+    plt.xlabel("Cool label, what should we put here")
+    plt.ylabel("Heelloooo lets goo")
+    plt.legend()
+    plt.show()
+
+
+def predict(data, targets):
     """
         Runs the classification
     """
+
+    phi = phi_function(data)
+
+    # phi = self.kernel(X, self.relevance_vec)
+    #
+    # if not self.removed_bias:
+    #     bias_trick = np.ones((X.shape[0], 1))
+    #     phi = np.hstack((bias_trick, phi))
+    #
+    # y = self.classify(self.mu_posterior, phi)
+    #
+    # def classify(self, mu_posterior, phi):
+    #     return expit(np.dot(phi, mu_posterior))
 
 
 def train(data, target):
@@ -126,8 +153,8 @@ def train(data, target):
     threshold = 0.0000000000001
 
     old_log_posterior = float("-inf")
-    weights = np.array([1 / (data.shape[0]+1)] * (data.shape[0]+1))  # Initialize uniformly
-    alpha = np.array([1 / (data.shape[0]+1)] * (data.shape[0]+1))
+    weights = np.array([1 / (data.shape[0] + 1)] * (data.shape[0] + 1))  # Initialize uniformly
+    alpha = np.array([1 / (data.shape[0] + 1)] * (data.shape[0] + 1))
     for i in range(max_training_iterations):
         print("number of iterations:")
         print(i)
@@ -166,6 +193,13 @@ def train(data, target):
 
         difference = log_posterior - old_log_posterior
         if difference <= threshold:
-            print("Training done, it converged")
+            print("Training done, it converged. Nr iterations: " + str(i + 1))
             break
         old_log_posterior = log_posterior
+
+    # Format data so we can plot it
+    target_values = np.unique(target)
+    data_index_target_list = [0] * len(target_values)
+    for i, c in enumerate(target_values):  # Saving the data index with its corresponding target
+        data_index_target_list[i] = (c, np.argwhere(target == c))
+    plot(data, data_index_target_list)
