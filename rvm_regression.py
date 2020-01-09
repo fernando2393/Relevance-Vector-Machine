@@ -1,7 +1,7 @@
 import numpy as np
 
 # Constants definition
-CONVERGENCE = 1e-10
+CONVERGENCE = 1e-9
 PRUNNING_THRESHOLD = 1e3
 
 def initializeAlpha(N):
@@ -55,8 +55,8 @@ def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis, N):
 
 def computeProbability(targets, variance, Basis, A):
     # Compute the Log Likelihood
-    mat = variance * np.identity(len(targets)) + np.dot(np.dot(Basis, np.linalg.inv(A)), np.transpose(Basis))
-    result = -1/2 * np.log(np.linalg.det(mat) + np.dot(np.transpose(targets), np.dot(np.linalg.inv(mat), targets)))
+    mat = variance * np.identity(len(targets)) + np.dot(np.dot(Basis, np.linalg.inv(A + np.eye(A.shape[1])*1e-27)), np.transpose(Basis))
+    result = -1/2 * np.log(np.linalg.det(mat + np.eye(mat.shape[1])*1e-27) + np.dot(np.transpose(targets), np.dot(np.linalg.inv(mat + np.eye(mat.shape[1])*1e-27), targets)))
     return result
 
 def prunning(alpha, Basis):
