@@ -31,10 +31,10 @@ def calculateA(alpha):
 def calculateSigma(variance, Basis, A): # Already squared
     return np.linalg.inv(pow(variance, -1) * np.dot(np.transpose(Basis), Basis) + A)
 
-def calculateMu(variance, Sigma, Basis, targets):
+def calculateMu(variance, Sigma, Basis, targets, N):
     return pow(variance, -1) * np.dot(np.dot(Sigma, np.transpose(Basis)), targets)
 
-def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis):
+def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis, N):
     # Update gammas
     
     gamma = np.zeros(len(alpha_old))
@@ -47,7 +47,7 @@ def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis):
         alpha[i] = gamma[i] / pow(mu[i], 2)
 
     # Update variance
-    variance = pow(np.linalg.norm(targets - np.dot(Basis, mu)), 2) / (len(targets) - np.sum(gamma))
+    variance = pow(np.linalg.norm(targets - np.dot(Basis, mu)), 2) / (N - np.sum(gamma))
 
     return alpha, variance
 
@@ -60,7 +60,7 @@ def computeProbability(targets, variance, Basis, A):
 def prunning(alpha, Basis):
     index = []
     for i in range(len(alpha[0])):
-        if (alpha[0][i] > PRUNNING_THRESHOLD):
+        if (i != 0 and alpha[0][i] > PRUNNING_THRESHOLD):
             index.append(i)
 
     alpha = np.delete(alpha, index, 1)
@@ -74,14 +74,14 @@ def fit(X, variance, targets, kernel, N):
     Basis = calculateBasisFunction(X, kernel)
     A = calculateA(alpha[0])
     sigma = calculateSigma(variance, Basis, A)
-    mu = calculateMu(variance, sigma, Basis, targets)
+    mu = calculateMu(variance, sigma, Basis, targets, N)
     cnt = 0
     while (True):
-        alpha[0], variance = updateHyperparameters(sigma, alpha[0], mu, targets, Basis)
+        alpha[0], variance = updateHyperparameters(sigma, alpha[0], mu, targets, Basis, N)
         alpha, Basis = prunning(alpha, Basis)
         A = calculateA(alpha[0])
         sigma = calculateSigma(variance, Basis, A)
-        mu = calculateMu(variance, sigma, Basis, targets)
+        mu = calculateMu(variance, sigma, Basis, targets, N)
         prob = computeProbability(targets, variance, Basis, A)
         if (abs(prob - previous_prob) < CONVERGENCE): # Condition for convergence
             break
@@ -90,10 +90,22 @@ def fit(X, variance, targets, kernel, N):
     print("Iterations:", cnt)
     return alpha, variance, mu, sigma
 
-def predict(X_test, relevant_vectors, variance, mu, sigma, kernel):
+def predict(X_train, X_test, relevant_vectors, variance, mu, sigma, kernel_type):
     targets_predict = np.zeros(len(X_test))
-    Basis = calculateBasisFunction(X_test, kernel)
-    Basis = Basis[:,relevant_vectors]
+    print(relevant_vectors)
+    X_samples = np.zeros(len(relevant_vectors)-1)
+    
+    for i in range(1,len(relevant_vectors)):
+        X_samples[i-1] = X_train[relevant_vectors[i]-1]
+    
+    Basis = np.zeros((len(X_test), len(X_samples)+1))
+    for i in range(len(X_test)):
+        for j in range(len(X_samples)+1):
+            if (j == 0):
+                Basis[i,j] = 1
+            else:
+                Basis[i,j] = kernel(X_test[i], X_samples[j-1], kernel_type)
+
     for i in range(len(X_test)):
         mean = np.dot(np.transpose(mu), Basis[i])
         var = variance + np.dot(np.dot(np.transpose(Basis[i]), sigma), Basis[i])
