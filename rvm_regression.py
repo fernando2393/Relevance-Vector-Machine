@@ -10,11 +10,10 @@ def initializeAlpha(N):
 
 def kernel(x_m, x_n, kernel_type):
     if (kernel_type == "linear_spline"):
-        compute_kernel = 1 + x_m * x_n + x_m * x_n * np.minimum(x_m, x_n) - ((x_m + x_n) / 2) * pow(np.minimum(x_m, x_n), 2) + pow(np.minimum(x_m, x_n), 3) / 3
-    elif (kernel_type == "rbf"):
-        compute_kernel = rbf_kernel(x_m, x_n, 0.01)
+        xmin = np.minimum(x_m, x_n)
+        compute_kernel = 1 + x_m * x_n + x_m * x_n * xmin - ((x_m + x_n) / 2) * pow(xmin, 2) + pow(xmin, 3) / 3
         
-    return compute_kernel.mean()
+    return compute_kernel.prod()
 
 def calculateBasisFunction(X, kernel_type):
     Basis = np.zeros((X.shape[0], X.shape[0]))
@@ -55,8 +54,8 @@ def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis, N):
 
 def computeProbability(targets, variance, Basis, A):
     # Compute the Log Likelihood
-    mat = variance * np.identity(len(targets)) + np.dot(np.dot(Basis, np.linalg.inv(A + np.eye(A.shape[1])*1e-27)), np.transpose(Basis))
-    result = -1/2 * np.log(np.linalg.det(mat + np.eye(mat.shape[1])*1e-27) + np.dot(np.transpose(targets), np.dot(np.linalg.inv(mat + np.eye(mat.shape[1])*1e-27), targets)))
+    mat = variance * np.identity(len(targets)) + np.dot(np.dot(Basis, np.linalg.inv(A + np.eye(A.shape[1])*1e-10)), np.transpose(Basis))
+    result = -1/2 * np.log(np.linalg.det(mat + np.eye(mat.shape[1])*1e-10) + np.dot(np.transpose(targets), np.dot(np.linalg.inv(mat + np.eye(mat.shape[1])*1e-10), targets)))
     return result
 
 def prunning(alpha, Basis):

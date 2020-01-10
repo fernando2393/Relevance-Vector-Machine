@@ -7,8 +7,8 @@ from math import sqrt
 from tqdm import tqdm
 
 # Initialize variable
-N = 240
-N_pred = 1000
+N = 100
+N_pred = 240
 dimensions = 10
 variance = 0.01
 tests = 100
