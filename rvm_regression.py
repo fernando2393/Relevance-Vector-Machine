@@ -2,7 +2,7 @@ import numpy as np
 
 # Constants definition
 CONVERGENCE = 1e-9
-PRUNNING_THRESHOLD = 1e3
+PRUNNING_THRESHOLD = 1e7
 
 def initializeAlpha(N):
     # Initialization of alpha assuming uniform scale priors
@@ -77,16 +77,16 @@ def fit(X, variance, targets, kernel, N):
     sigma = calculateSigma(variance, Basis, A)
     mu = calculateMu(variance, sigma, Basis, targets, N)
     cnt = 0
-    while (True):
+    while (cnt<1000):
         alpha[0], variance = updateHyperparameters(sigma, alpha[0], mu, targets, Basis, N)
         alpha, Basis = prunning(alpha, Basis)
         A = calculateA(alpha[0])
         sigma = calculateSigma(variance, Basis, A)
         mu = calculateMu(variance, sigma, Basis, targets, N)
-        prob = computeProbability(targets, variance, Basis, A)
-        if (abs(prob - previous_prob) < CONVERGENCE): # Condition for convergence
-            break
-        previous_prob = prob
+        #prob = computeProbability(targets, variance, Basis, A)
+        #if (abs(prob - previous_prob) < CONVERGENCE): # Condition for convergence
+        #    break
+        #previous_prob = prob
         cnt += 1
     print("Iterations:", cnt)
     return alpha, variance, mu, sigma

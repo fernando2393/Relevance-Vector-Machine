@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 from math import sqrt
 from tqdm import tqdm
-from sklearn.preprocessing import StandardScaler
+from sklearn import preprocessing
 
 num_iterations = 100
 training_samples = 240
@@ -40,10 +40,8 @@ training_targets += np.random.normal(0, training_targets.std()/3)
 training_targets = np.reshape(training_targets, (len(training_targets),1))
 
 # Scaling the dimensions to make proper comparisons
-scaleX = StandardScaler().fit(X_training)
-scaley = StandardScaler().fit(training_targets)
-X_training = scaleX.transform(X_training)
-training_targets = scaley.transform(training_targets)
+MinMaxScaler = preprocessing.MinMaxScaler()
+X_training = MinMaxScaler.fit_transform(X_training)
 
 alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_training, variance, training_targets, kernel, training_samples)
 relevant_vectors = alpha[1].astype(int)
@@ -59,13 +57,13 @@ for i in tqdm(range(num_iterations)):
     X_test[:,3] = np.random.uniform(1,11, test_samples)
     y[:,i] = pow(np.tan((X_test[:,1] * X_test[:,2] - 1 / (X_test[:,1] * X_test[:,3])
     ) / X_test[:,0]), -1)
-    X_test = scaleX.transform(X_test)
+    X_test = MinMaxScaler.fit_transform(X_test)
     pred_array.append(rvm_r.predict(X_training, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions))
 
 y = y.mean(axis=1)
 pred_mean = np.array(pred_array).mean(axis=0)
 
-# Inverse trasmform to real Scale
-pred_mean = scaley.inverse_transform(pred_mean)
-print(y)
 print('RMSE:', sqrt(mean_squared_error(y, pred_mean)))
+plt.plot(range(test_samples), y)
+plt.scatter(range(test_samples), pred_mean, c='orange')
+plt.show()
