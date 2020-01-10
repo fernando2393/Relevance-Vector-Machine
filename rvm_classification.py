@@ -1,23 +1,34 @@
-import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.optimize import minimize
 from scipy.special import expit
+from tqdm import tqdm as tqdm
 
 import Kernel
 
 
-# Formulas are taken from the paper
-class RVM_Classifier():
+class RVC:
+    """
+        Relevance Vector Machine - Classification
+
+    """
 
     def __init__(self):
-        self.threshold_alpha = 1e5
-        self.bias_used = True
+
+        # Alphas pruning threshold.
+        self.threshold_alpha = 1e9
+
+        # True if bias was pruned.
         self.removed_bias = False
 
-        self.trained_weights = None
+        # Prior variances (weights).
+        self.alphas = None
+        self.alphas_old = None
+        self.phi = None
+        self.weight = None
         self.relevance_vector = None
 
+        # Training and test data
         self.training_data = None
         self.training_labels = None
         self.test_data = None
@@ -26,8 +37,11 @@ class RVM_Classifier():
     def set_training_data(self, training_data, training_labels):
         self.training_data = training_data
         self.training_labels = training_labels
+        # TODO sanitize targeet
+        # T[T == -1] = 0
 
     def set_predefined_training_data(self, data_set, data_set_index=1):
+
         self.training_data = np.loadtxt(
             "datasets/{data_set}/{data_set}_train_data_{index}.asc".format(data_set=data_set, index=data_set_index))
         self.training_labels = np.loadtxt(
@@ -37,112 +51,155 @@ class RVM_Classifier():
         self.test_labels = np.loadtxt(
             "datasets/{data_set}/{data_set}_test_labels_{index}.asc".format(data_set=data_set, index=data_set_index))
 
-    # Formula 27
-    def update_weight_function(self, sigma, phi, beta, target):
-        return np.linalg.multi_dot([sigma, phi.T, beta, target])
-
-    # From formula after 16 before 18
-    def gamma_function(self, alpha, sigma):
-        gamma = np.zeros(len(alpha))
-        for i in range(len(alpha)):
-            gamma[i] = 1 - alpha[i] * sigma[i][i]
-        return gamma
-
     # From formula 16
-    def recalculate_alphas_function(self, alpha, gamma, weight):
-        new_alphas = np.zeros(len(alpha))
-        for i in range(len(gamma)):
-            new_alphas[i] = gamma[i] / (weight[i] ** 2 + sys.float_info.epsilon)
-        return new_alphas
+    def recalculate_alphas_function(self, gamma, weights):
+        return gamma / (weights ** 2)
 
-    # def phi_function(self, x):
-    #     phi = np.ones((x.shape[0], x.shape[0] + 1))
-    #
-    #     for n in range(x.shape[0]):
-    #         for m in range(x.shape[0]):
-    #             phi[n][m + 1] = Kernel.radial_basis_kernel(x[n, :], x[m, :])
-    #     return phi
+    # From formula after 16 before 18 (17)
+    def gamma_function(self, alpha, sigma):
+        return 1 - alpha * np.diag(sigma)
 
-    def phi_function(self, x):
-        phi = np.ones((x.shape[0], self.relevance_vector.shape[0] + 1))
-
-        for n in range(x.shape[0]):
-            for m in range(self.relevance_vector.shape[0]):
-                phi[n][m + 1] = Kernel.radial_basis_kernel(x[n, :], self.relevance_vector[m, :])
-        return phi
-
-    # Formula 2
-    def y_function(self, weight, x, phi):
-        w0 = weight[0]  # TODO we dont use this anymore
-        y = np.zeros(x.shape[0])
-        # phi_sum = np.sum(phi,axis=1)
-        # for n in range(x.shape[0]):
-        # for m in range(n, x.shape[0]):
-        #    y[n] += weight[n+1]*phi_sum[n]
-        test = np.dot(phi, weight)
-        y = expit(test)  # Sigmoid function
-
-        return y
+    # Formula 26
+    def sigma_function(self, phi, beta, alpha):
+        b = np.linalg.multi_dot([phi.T, beta, phi])
+        return np.linalg.inv(b + np.diag(alpha))
 
     # From under formula 25
     def beta_matrix_function(self, y, N):
         beta_matrix = np.zeros((N, N))
         for n in range(N):
             beta_matrix[n][n] = expit(y[n]) * (1 - expit(y[n]))
-        # print(beta_matrix)
         return beta_matrix
 
-    # Formula 26
-    def sigma_function(self, phi, beta, alpha):
-        b = np.linalg.multi_dot([phi.T, beta, phi])
-        # print("b")
-        # print(b)
-        return np.linalg.inv(b + np.diag(alpha))
+    def phi_function(self, x, y, add=False):
+        if add:
+            phi_kernel = Kernel.radial_basis_kernel(x, y, 0.5)
+            phi0 = np.ones((phi_kernel.shape[0], 1))
+            return np.hstack((phi0, phi_kernel))
+        return Kernel.radial_basis_kernel(x, y, 0.5)
 
-    # Formula 28 and
-    def log_posterior_function(self, x, weight, target, phi, alpha):
-        log_posterior = 0
-        y = self.y_function(weight, x, phi)
-        # print("min")
-        # print(min(y))
-        for n in range(x.shape[0]):
-            # for k in range(target.shape[1]):
-            # posterior += target[n] * np.log(sigmoid_function(y[n])) + (1-target[n])*np.log(1-sigmoid_function(y[n]))
-            # print("aaaaaaaaaaaaaa")
-            # print(y[n])
+    # Formula 2
+    def y_function(self, weight, phi):
+        y = expit(np.dot(phi, weight))  # Sigmoid function
+        return y
 
-            log_posterior += target[n] * np.log(y[n])  # + (1-target[n])*np.log(1-y[n])
-        log_posterior = log_posterior - np.linalg.multi_dot([weight.T, np.diag(alpha), weight])
+    def log_posterior_function(self, weight, alpha, phi, target):
+        y = self.y_function(weight, phi)
 
-        return log_posterior
+        y_1 = y[target == 1]
+        t_1 = np.sum(np.log(y_1))
+        y_0 = y[target == 0]
+        t_0 = np.sum(np.log(1 - y_0))
 
-    # Todo This function is alot of copy paste ceck it before doing more with it
-    def prune(self, alphas, weights, phi, gamma, sigma):
-        keep_alpha = alphas < self.threshold_alpha
+        # Todo Optimize this, super slow
+        # t_1 = 0
+        # t_0 = 0
+        # for n in range(len(target)):
+        #     if target[n] == 1:
+        #         t_1 += np.log(y[n])
+        #     else:
+        #         t_0 += np.log(1-y[n])
+        log_posterior = t_1 + t_0 - np.linalg.multi_dot([weight.T, np.diag(alpha), weight]) / 2
+        jacobian = np.dot(np.diag(alpha), weight) - np.dot(phi.T, (target - y))
+        return -log_posterior, jacobian
 
-        if not np.any(keep_alpha):
-            keep_alpha[0] = True
-            if self.bias_used:
-                keep_alpha[-1] = True
+    def hessian(self, mu_posterior, alphas, phi, T):
+        y = self.y_function(mu_posterior, phi)
+        B = np.diag(y * (1 - y))
+        return np.diag(alphas) + np.dot(phi.T, np.dot(B, phi))
 
-        if self.bias_used:
-            if not keep_alpha[-1]:
-                self.bias_used = False
-            self.relevance_vector = self.relevance_vector[keep_alpha[:-1]]
+    def update_weights(self):
+        result = minimize(
+            fun=self.log_posterior_function,
+            hess=self.hessian,
+            x0=self.weight,
+            args=(self.alphas, self.phi, self.training_labels),
+            method='Newton-CG',
+            jac=True,
+            options={
+                'maxiter': 50
+            }
+        )
+        self.weight = result.x  # Updates the weights to the maximized (log is negative that is why we minimize)
+        sigma_posterior = np.linalg.inv(self.hessian(self.weight, self.alphas, self.phi, self.training_labels))
+        return sigma_posterior
+
+    def sigma_posterior_function(self):
+        sigma_posterior = np.linalg.inv(self.hessian(self.weight, self.alphas, self.phi, self.training_labels))
+        return sigma_posterior
+
+    # This function needs to be changed
+    def prune(self):
+        """
+            Pruning based on alpha values.
+        """
+        mask = self.alphas < self.threshold_alpha
+
+        self.alphas = self.alphas[mask]
+        self.alphas_old = self.alphas_old[mask]
+        self.phi = self.phi[:, mask]
+        self.weight = self.weight[mask]
+
+        if not self.removed_bias:
+            self.relevance_vector = self.relevance_vector[mask[1:]]
         else:
-            self.relevance_vector = self.relevance_vector[keep_alpha]
+            self.relevance_vector = self.relevance_vector[mask]
 
-        # if not keep_alpha[0] and not self.removed_bias:
-        #     self.removed_bias = True
+        if not mask[0] and not self.removed_bias:
+            self.removed_bias = True
+            print("Bias removed")
 
+    def fit(self):
+        """
+            Train the classifier
+        """
+        self.relevance_vector = self.training_data
+        self.phi = self.phi_function(self.training_data, self.training_data, True)
 
-        return alphas[keep_alpha], weights[keep_alpha], phi[:, keep_alpha], gamma[keep_alpha], sigma[keep_alpha]
+        # Initialize uniformly
+        self.alphas = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
+        self.weight = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
 
-    # def plot(self, data, data_index_target_list):
-    def plot(self, data=None, target=None):
-        if data == None and target == None:
+        max_training_iterations = 10000
+        threshold = 1e-3
+        for i in tqdm(range(max_training_iterations)):
+            self.alphas_old = np.copy(self.alphas)
+
+            sigma_posterior = self.update_weights()
+            # sigma_posterior = self.sigma_posterior_function()  # Todo explore sigma_posterior bug
+
+            y = self.y_function(self.weight, self.phi)
+            beta = self.beta_matrix_function(y, self.training_data.shape[0])
+            sigma = self.sigma_function(self.phi, beta, self.alphas)
+
+            gammas = self.gamma_function(self.alphas, sigma_posterior)
+            self.alphas = self.recalculate_alphas_function(gammas, self.weight)
+
+            self.prune()
+
+            difference = np.amax(np.abs(self.alphas - self.alphas_old)) # Need to change this
+            if difference < threshold:
+                print("Training done, it converged. Nr iterations: " + str(i + 1))
+                break
+
+    def predict(self, X):
+        phi = self.phi_function(X, self.relevance_vector)
+        # Don't know what this means
+        # if not self.removed_bias:
+        #     bias_trick = np.ones((X.shape[0], 1))
+        #     phi = np.hstack((bias_trick, phi))
+
+        y = self.y_function(self.weight, phi)
+        pred = np.where(y > 0.5, 1, 0)
+        return pred
+
+    def plot(self, data=[], target=[]):
+        if data == [] and target == []:
             data = self.test_data
             target = self.test_labels
+
+        # Todo sanitize target always
+        #  T[T == -1] = 0
 
         # Format data so we can plot it
         print("Will start plotting")
@@ -151,7 +208,7 @@ class RVM_Classifier():
         for i, c in enumerate(target_values):  # Saving the data index with its corresponding target
             data_index_target_list[i] = (c, np.argwhere(target == c))
 
-        h = 0.1  # step size in the mesh
+        h = 0.01  # step size in the mesh
         # create a mesh to plot in
         x_min, x_max = data[:, 0].min(), data[:, 0].max()  # Gets the max and min value of x in the data
         y_min, y_max = data[:, 1].min(), data[:, 1].max()  # Gets the max and min value of y in the data
@@ -163,7 +220,6 @@ class RVM_Classifier():
         print("Calculating the prediction, this might take a while...")
         data_mesh = np.c_[xx.ravel(), yy.ravel()]
         Z = self.predict(data_mesh)
-        # Z = self.predict(data)
 
         # Put the result into a color plot
         Z = Z.reshape(xx.shape)
@@ -179,77 +235,3 @@ class RVM_Classifier():
         plt.ylabel("Heelloooo lets goo")
         plt.legend()
         plt.show()
-
-    def predict(self, data):
-        """
-            Runs the classification
-        """
-        phi = self.phi_function(data)
-        y = self.y_function(self.trained_weights, data, phi)
-        # y = np.array([expit(y) for y in estimations])
-        pred = np.where(y > 0.5, 1, -1)
-        return pred
-
-    def train(self):
-        """
-         Train the classifier
-        """
-        self.relevance_vector = self.training_data
-        max_training_iterations = 100
-        threshold = 0.0000000000001
-
-        phi = self.phi_function(self.training_data)
-        # print("phi")
-        # print(phi)
-
-        old_log_posterior = float("-inf")
-        weights = np.array(
-            [1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))  # Initialize uniformly
-        alpha = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
-        for i in range(max_training_iterations):
-            print("number of iterations:")
-            print(i)
-
-            y = self.y_function(weights, self.training_data, phi)
-            # print("y")
-            # print(y)
-
-            beta = self.beta_matrix_function(y, self.training_data.shape[0])
-            # print("beta")
-            # print(beta)
-
-            sigma = self.sigma_function(phi, beta, alpha)
-            # print("sigma")
-            # print(sigma)
-
-            gamma = self.gamma_function(alpha, sigma)
-
-            weights = self.update_weight_function(sigma, phi, beta, self.training_labels)
-
-            # print("weight")
-            # print(weights)
-
-            alpha = self.recalculate_alphas_function(alpha, gamma, weights)
-
-            alpha, weights, phi, gamma, sigma = self.prune(alpha, weights, phi, gamma, sigma)
-
-            # print("alpha")
-            # print(alpha)
-
-            # print("y")
-            # print(y)
-            # print(min(y))
-            log_posterior = self.log_posterior_function(self.training_data, weights, self.training_labels, phi, alpha)
-
-            difference = log_posterior - old_log_posterior
-            if difference <= threshold:
-                print("Training done, it converged. Nr iterations: " + str(i + 1))
-                self.trained_weights = weights
-                break
-            old_log_posterior = log_posterior
-
-        # Format data so we can plot it
-        target_values = np.unique(self.training_labels)
-        data_index_target_list = [0] * len(target_values)
-        for i, c in enumerate(target_values):  # Saving the data index with its corresponding target
-            data_index_target_list[i] = (c, np.argwhere(self.training_labels == c))
