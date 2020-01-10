@@ -56,7 +56,7 @@ target_pred = rvm_r.predict(X_train, X_pred, relevant_vectors, variance_mp, mu_m
 
 # Check Performance
 print('RMSE:', sqrt(mean_squared_error(true_target, target_pred)))
-print('Number of relevant vectors: ', len(relevant_vectors))
+print('Number of relevant vectors:', len(relevant_vectors))
 
 
 
