@@ -2,7 +2,7 @@ import numpy as np
 
 # Constants definition
 CONVERGENCE = 1e-9
-PRUNNING_THRESHOLD = 1e6
+PRUNNING_THRESHOLD = 1e3
 
 def initializeAlpha(N):
     # Initialization of alpha assuming uniform scale priors
