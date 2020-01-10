@@ -37,7 +37,7 @@ for it in tqdm(range(tests)):
     pred_array.append(rvm_r.predict(X, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions))
 pred_mean = np.array(pred_array).mean(axis=0)
 print('RMSE:', sqrt(mean_squared_error(y, pred_mean)))
-
+print('Maximum error between predicted samples and true: ', max(abs(y-pred_mean))**2)
 plt.plot(X_test, pred_mean, c='r', label='Predicted values')
 plt.scatter(X, targets, label='Training samples')
 plt.plot(X_test, y, c='black', label='True function')

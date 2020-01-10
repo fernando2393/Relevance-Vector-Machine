@@ -11,7 +11,7 @@ N = 100
 N_pred = 240
 dimensions = 10
 variance = 0.01
-tests = 100
+tests = 1000
 
 # Choose kernel between linear_spline or exponential
 kernel = "linear_spline"
@@ -56,6 +56,7 @@ target_pred = rvm_r.predict(X_train, X_pred, relevant_vectors, variance_mp, mu_m
 
 # Check Performance
 print('RMSE:', sqrt(mean_squared_error(true_target, target_pred)))
+print('Number of relevant vectors: ', len(relevant_vectors))
 
 
 
