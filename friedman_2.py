@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 from math import sqrt
 from tqdm import tqdm
+from sklearn import preprocessing
 
 num_iterations = 100
 training_samples = 240
@@ -34,6 +35,10 @@ for i in range(training_samples):
     # Adding noise
     training_targets[i] += np.random.normal(0, training_targets[i]/3)
 
+# Scaling the dimensions to make proper comparisons 
+X_training = preprocessing.scale(X_training)
+training_targets = preprocessing.scale(training_targets)
+
 alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_training, variance, training_targets, kernel, training_samples)
 relevant_vectors = alpha[1].astype(int)
 print("Number of relevant vectors:", len(relevant_vectors))
@@ -48,7 +53,13 @@ for i in range(num_iterations):
     X_test[:,3] = np.random.uniform(1,11, test_samples)
     y[:,i] = pow(pow(X_test[:,0], 2) + pow(X_test[:,1] * 
     X_test[:,2] - 1 / (X_test[:,1] * X_test[:,3]), 2), 1/2)
+    X_test = preprocessing.scale(X_test)
     pred_array.append(rvm_r.predict(X_training, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions))
+
 y = y.mean(axis=1)
 pred_mean = np.array(pred_array).mean(axis=0)
+
+# Inverse trasmform to real Scale
+print(pred_mean)
+
 print('RMSE:', sqrt(mean_squared_error(y, pred_mean)))

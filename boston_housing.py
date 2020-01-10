@@ -8,6 +8,7 @@ from math import sqrt
 from tqdm import tqdm
 from sklearn.datasets import load_boston
 from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
 
 # Importing Boston Housing data set
 boston_dataset = load_boston()
@@ -17,13 +18,19 @@ y = boston["MEDV"].values
 X = boston.drop(["MEDV"], axis = 1).values
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=42)
 
+# Scaling the dimensions to make proper comparisons 
+X_train = preprocessing.scale(X_train)
+X_test = preprocessing.scale(X_test)
+y_train = preprocessing.scale(y_train)
+y_test = preprocessing.scale(y_test)
+
 # Choose kernel between linear_spline or exponential
 kernel = "linear_spline"
 
 # Initialize variance
 variance = 0.01
-N = X_train.shape[0] # 481
-dimensions = X_train.shape[1] #13
+N = X_train.shape[0] # 480
+dimensions = X_train.shape[1] #14
 
 # Fit
 alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, N)
@@ -31,6 +38,9 @@ relevant_vectors = alpha[1].astype(int)
 
 # Predict
 target_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions)
+
+# Inverse trasmform to real Scale
+print(target_pred)
 
 # Check Performance
 print('RMSE:', sqrt(mean_squared_error(y_test, target_pred)))
