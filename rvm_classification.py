@@ -7,7 +7,7 @@ from tqdm import tqdm as tqdm
 import Kernel
 
 
-class RVC:
+class RVM_Classifier:
     """
         Relevance Vector Machine - Classification
 

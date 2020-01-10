@@ -15,7 +15,7 @@ train_target = np.loadtxt("datasets/ripley/ripley_train_labels_other_guys.asc")
 # train_target = np.loadtxt("datasets/banana/banana_train_labels_1.asc")
 
 
-rvc = rvm_classification.RVC()
+rvc = rvm_classification.RVM_Classifier()
 
 # rvc.set_predefined_training_data("banana")
 rvc.set_training_data(train_data, train_target)
