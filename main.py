@@ -8,19 +8,17 @@ test_target = np.loadtxt("datasets/ripley/ripley_test_labels_other_guys.asc")
 train_data = np.loadtxt("datasets/ripley/ripley_train_data_other_guys.asc")
 train_target = np.loadtxt("datasets/ripley/ripley_train_labels_other_guys.asc")
 
-# test_data = np.loadtxt("datasets/titanic/titanic_test_data_1.asc")
-# test_target = np.loadtxt("datasets/titanic/titanic_test_labels_1.asc")
-#
-# train_data = np.loadtxt("datasets/banana/banana_train_data_1.asc")
-# train_target = np.loadtxt("datasets/banana/banana_train_labels_1.asc")
-
-
 rvc = rvm_classification.RVM_Classifier()
 
-# rvc.set_predefined_training_data("banana")
-rvc.set_training_data(train_data, train_target)
+# test_data, test_target = rvc.get_nr_random_samples(train_data, train_target, 250)
+
+rvc.set_predefined_training_data("breast-cancer")
+# rvc.set_training_data(train_data, train_target)
+# rvc.set_training_data(test_data, test_target)
 rvc.fit()
-rvc.plot(test_data, test_target)
+# rvc.plot(test_data, test_target)
+# rvc.plot(train_data, train_target)
 # rvc.plot()
-
-
+prediction = rvc.predict(use_training=False)
+error_rate = rvc.get_prediction_error_rate(prediction, train_target)
+print("Error rate is: " + str(error_rate))

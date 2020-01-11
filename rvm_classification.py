@@ -1,3 +1,5 @@
+import random
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import minimize
@@ -8,10 +10,6 @@ import Kernel
 
 
 class RVM_Classifier:
-    """
-        Relevance Vector Machine - Classification
-
-    """
 
     def __init__(self):
 
@@ -37,19 +35,45 @@ class RVM_Classifier:
     def set_training_data(self, training_data, training_labels):
         self.training_data = training_data
         self.training_labels = training_labels
-        # TODO sanitize targeet
-        # T[T == -1] = 0
+        self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
 
-    def set_predefined_training_data(self, data_set, data_set_index=1):
-
+    def set_predefined_training_data(self, data_set, data_set_index=1, nr_samples=None):
         self.training_data = np.loadtxt(
             "datasets/{data_set}/{data_set}_train_data_{index}.asc".format(data_set=data_set, index=data_set_index))
         self.training_labels = np.loadtxt(
             "datasets/{data_set}/{data_set}_train_labels_{index}.asc".format(data_set=data_set, index=data_set_index))
+        self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
+
         self.test_data = np.loadtxt(
             "datasets/{data_set}/{data_set}_test_data_{index}.asc".format(data_set=data_set, index=data_set_index))
         self.test_labels = np.loadtxt(
             "datasets/{data_set}/{data_set}_test_labels_{index}.asc".format(data_set=data_set, index=data_set_index))
+        self.test_labels[self.test_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
+
+        if nr_samples is not None:
+            random__training_data, random_training_target = self.get_nr_random_samples(self.training_data,
+                                                                                       self.training_labels, nr_samples)
+            self.training_data = random__training_data
+            self.training_labels = random_training_target
+
+            random__test_data, random_test_target = self.get_nr_random_samples(self.test_data, self.test_labels,
+                                                                               nr_samples)
+            self.test_data = random__test_data
+            self.test_labels = random_test_target
+
+    def get_nr_random_samples(self, data, target, nr_samples):
+        total_nr_samples = data.shape[0]
+        rnd_indexes = random.sample(range(total_nr_samples), nr_samples)
+
+        random_data = []
+        random_target = []
+        for index in rnd_indexes:
+            random_data.append(data[index])
+            random_target.append(target[index])
+
+        random_data = np.array(random_data)
+        random_target = np.array(random_target)
+        return random_data, random_target
 
     # From formula 16
     def recalculate_alphas_function(self, gamma, weights):
@@ -168,18 +192,24 @@ class RVM_Classifier:
             beta = self.beta_matrix_function(y, self.training_data.shape[0])
             sigma = self.sigma_function(self.phi, beta, self.alphas)
 
-            gammas = self.gamma_function(self.alphas, sigma_posterior)
+            gammas = self.gamma_function(self.alphas, sigma)
             self.alphas = self.recalculate_alphas_function(gammas, self.weight)
 
             self.prune()
 
-            difference = np.amax(np.abs(self.alphas - self.alphas_old)) # Need to change this
+            difference = np.amax(np.abs(self.alphas - self.alphas_old))  # Need to change this
             if difference < threshold:
                 print("Training done, it converged. Nr iterations: " + str(i + 1))
                 break
 
-    def predict(self, X):
-        phi = self.phi_function(X, self.relevance_vector)
+    def predict(self, data=[], use_training=False):
+        if data == []:
+            if use_training:
+                data = self.training_data
+            else:
+                data = self.test_data
+
+        phi = self.phi_function(data, self.relevance_vector, True)
         # Don't know what this means
         # if not self.removed_bias:
         #     bias_trick = np.ones((X.shape[0], 1))
@@ -193,9 +223,8 @@ class RVM_Classifier:
         if data == [] and target == []:
             data = self.test_data
             target = self.test_labels
-
-        # Todo sanitize target always
-        #  T[T == -1] = 0
+        else:
+            target[target == -1] = 0  # Sanitize labels, some use -1 and some use 0
 
         # Format data so we can plot it
         print("Will start plotting")
@@ -220,14 +249,21 @@ class RVM_Classifier:
         # Put the result into a color plot
         Z = Z.reshape(xx.shape)
 
-        colors = ["bo", "go", "ro", "co", "mo", "yo", "bo", "wo"]
+        colors = ["bx", "go", "ro", "co", "mo", "yo", "bo", "wo"]
         plt.figure(figsize=(12, 6))
         plt.title('Banana dataset')
+        plt.contour(xx, yy, Z, cmap=plt.cm.Paired)
         for i, c in enumerate(data_index_target_list):
             plt.plot(data[c[1], 0], data[c[1], 1], colors[i], label="Target: " + str(c[0]))
-        plt.contour(xx, yy, Z, cmap=plt.cm.Paired)
-        # plt.scatter(self.relevance_vector[:, 0], self.relevance_vector[:, 1], c='black', marker='+', s=500)
+        plt.scatter(self.relevance_vector[:, 0], self.relevance_vector[:, 1], c='black', marker='+', s=500)
         plt.xlabel("Cool label, what should we put here")
         plt.ylabel("Heelloooo lets goo")
         plt.legend()
         plt.show()
+
+    def get_prediction_error_rate(self, predicted_targets, true_targets):
+        nr_correct = 0
+        for i in range(len(predicted_targets)):
+            if predicted_targets[i] == true_targets[i]:
+                nr_correct += 1
+        return nr_correct / len(predicted_targets)
