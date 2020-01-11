@@ -38,7 +38,7 @@ def calculateA(alpha):
     return alpha * np.identity(len(alpha))
 
 def calculateSigma(variance, Basis, A): # Already squared
-    return np.linalg.inv(pow(variance, -1) * np.dot(np.transpose(Basis), Basis) + A)
+    return np.linalg.inv(pow(variance, -1) * np.dot(np.transpose(Basis), Basis) + A + np.eye(A.shape[0])*1e-9)
 
 def calculateMu(variance, Sigma, Basis, targets, N):
     return pow(variance, -1) * np.dot(np.dot(Sigma, np.transpose(Basis)), targets)
