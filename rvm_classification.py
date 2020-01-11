@@ -68,7 +68,7 @@ class RVM_Classifier:
     def beta_matrix_function(self, y, N):
         beta_matrix = np.zeros((N, N))
         for n in range(N):
-            beta_matrix[n][n] = expit(y[n]) * (1 - expit(y[n]))
+            beta_matrix[n][n] = y[n] * (1 - y[n])
         return beta_matrix
 
     def phi_function(self, x, y, add=False):
@@ -85,27 +85,23 @@ class RVM_Classifier:
 
     def log_posterior_function(self, weight, alpha, phi, target):
         y = self.y_function(weight, phi)
-
+        
+        sum_y = np.zeros(2)
         y_1 = y[target == 1]
-        t_1 = np.sum(np.log(y_1))
+        sum_y[1] = np.sum(np.log(y_1))
         y_0 = y[target == 0]
-        t_0 = np.sum(np.log(1 - y_0))
-
-        # Todo Optimize this, super slow
-        # t_1 = 0
-        # t_0 = 0
-        # for n in range(len(target)):
-        #     if target[n] == 1:
-        #         t_1 += np.log(y[n])
-        #     else:
-        #         t_0 += np.log(1-y[n])
-        log_posterior = t_1 + t_0 - np.linalg.multi_dot([weight.T, np.diag(alpha), weight]) / 2
+        sum_y[0] = np.sum(np.log(1 - y_0))
+        
+        log_posterior = sum_y[1] + sum_y[0] - np.linalg.multi_dot([weight.T, np.diag(alpha), weight]) / 2
+        
         jacobian = np.dot(np.diag(alpha), weight) - np.dot(phi.T, (target - y))
+        
         return -log_posterior, jacobian
 
     def hessian(self, mu_posterior, alphas, phi, T):
         y = self.y_function(mu_posterior, phi)
-        B = np.diag(y * (1 - y))
+        #B = np.diag(y * (1 - y))
+        B = self.beta_matrix_function(y, self.training_data.shape[0])
         return np.diag(alphas) + np.dot(phi.T, np.dot(B, phi))
 
     def update_weights(self):
@@ -160,7 +156,7 @@ class RVM_Classifier:
         self.alphas = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
         self.weight = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
 
-        max_training_iterations = 10000
+        max_training_iterations = 1000
         threshold = 1e-3
         for i in tqdm(range(max_training_iterations)):
             self.alphas_old = np.copy(self.alphas)
@@ -208,7 +204,7 @@ class RVM_Classifier:
         for i, c in enumerate(target_values):  # Saving the data index with its corresponding target
             data_index_target_list[i] = (c, np.argwhere(target == c))
 
-        h = 0.01  # step size in the mesh
+        h = 0.1  # step size in the mesh
         # create a mesh to plot in
         x_min, x_max = data[:, 0].min(), data[:, 0].max()  # Gets the max and min value of x in the data
         y_min, y_max = data[:, 1].min(), data[:, 1].max()  # Gets the max and min value of y in the data
