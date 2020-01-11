@@ -28,13 +28,13 @@ X_training[:,3] = np.random.uniform(1,11, training_samples)
 # Generation of training targets
 training_targets = np.zeros(training_samples)
 
-# Generating target without noise
-training_targets = pow(np.tan((X_training[:,1] * X_training[:,2] - 1 / (X_training[:,1] * X_training[:,3]))
-/ X_training[:,0]), -1)
-
-# Adding noise
 for i in range(training_samples):
-    training_targets[i] += np.random.normal(0, training_targets.std()/3)
+    # Generating target without noise
+    training_targets[i] = pow(np.tan((X_training[i,1] * X_training[i,2] - 1 / (X_training[i,1] * X_training[i,3])
+    ) / X_training[i,0]), -1)
+    # Adding noise
+
+training_targets += np.random.normal(0, training_targets.std()/3)
 
 # Reshape to create scalar
 training_targets = np.reshape(training_targets, (len(training_targets),1))
@@ -55,8 +55,8 @@ for i in tqdm(range(num_iterations)):
     X_test[:,1] = np.random.uniform(40 * np.pi, 560 * np.pi, test_samples)
     X_test[:,2] = np.random.uniform(0,1, test_samples)
     X_test[:,3] = np.random.uniform(1,11, test_samples)
-    y[:,i] = pow(np.tan((X_test[:,1] * X_test[:,2] - 1 / (X_test[:,1] * X_test[:,3]))
-    / X_test[:,0]), -1)
+    y[:,i] = pow(np.tan((X_test[:,1] * X_test[:,2] - 1 / (X_test[:,1] * X_test[:,3])
+    ) / X_test[:,0]), -1)
     X_test = MinMaxScaler.fit_transform(X_test)
     pred_array.append(rvm_r.predict(X_training, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions))
 
@@ -64,7 +64,6 @@ y = y.mean(axis=1)
 pred_mean = np.array(pred_array).mean(axis=0)
 
 print('RMSE:', sqrt(mean_squared_error(y, pred_mean)))
-plt.scatter(range(test_samples), y, label='Real')
-plt.scatter(range(test_samples), pred_mean, c='orange', label='Predicted')
-plt.legend()
+plt.plot(range(test_samples), y)
+plt.scatter(range(test_samples), pred_mean, c='orange')
 plt.show()

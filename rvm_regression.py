@@ -2,7 +2,7 @@ import numpy as np
 
 # Constants definition
 CONVERGENCE = 1e-9
-PRUNNING_THRESHOLD = 1e7
+PRUNNING_THRESHOLD = 1e6
 
 def initializeAlpha(N):
     # Initialization of alpha assuming uniform scale priors
@@ -77,7 +77,7 @@ def fit(X, variance, targets, kernel, N):
     sigma = calculateSigma(variance, Basis, A)
     mu = calculateMu(variance, sigma, Basis, targets, N)
     cnt = 0
-    while (cnt<1000):
+    while (cnt<10000):
         alpha[0], variance = updateHyperparameters(sigma, alpha[0], mu, targets, Basis, N)
         alpha, Basis = prunning(alpha, Basis)
         A = calculateA(alpha[0])
