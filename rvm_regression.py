@@ -52,7 +52,7 @@ def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis, N):
 
     return alpha, variance
 
-def computeProbability(targets, variance, Basis, A):
+def computeLogLikelihood(targets, variance, Basis, A):
     # Compute the Log Likelihood
     mat = variance * np.identity(len(targets)) + np.dot(np.dot(Basis, np.linalg.inv(A + np.eye(A.shape[1])*1e-10)), np.transpose(Basis))
     result = -1/2 * np.log(np.linalg.det(mat + np.eye(mat.shape[1])*1e-10) + np.dot(np.transpose(targets), np.dot(np.linalg.inv(mat + np.eye(mat.shape[1])*1e-10), targets)))
@@ -83,10 +83,10 @@ def fit(X, variance, targets, kernel, N):
         A = calculateA(alpha[0])
         sigma = calculateSigma(variance, Basis, A)
         mu = calculateMu(variance, sigma, Basis, targets, N)
-        #prob = computeProbability(targets, variance, Basis, A)
-        #if (abs(prob - previous_prob) < CONVERGENCE): # Condition for convergence
-        #    break
-        #previous_prob = prob
+        #prob = computeLogLikelihood(targets, variance, Basis, A)
+        if (abs(prob - previous_prob) < CONVERGENCE): # Condition for convergence
+            break
+        previous_prob = prob
         cnt += 1
     print("Iterations:", cnt)
     return alpha, variance, mu, sigma
