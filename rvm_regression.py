@@ -25,7 +25,7 @@ def kernel(x_m, x_n, kernel_type):
 
 def calculateBasisFunction(X, kernel_type):
     Basis = np.zeros((X.shape[0], X.shape[0]))
-    for i in tqdm(range(Basis.shape[0])):
+    for i in range(Basis.shape[0]):
         for j in range(Basis.shape[1]):
             Basis[i,j] = kernel(X[i], X[j], kernel_type)
 
@@ -118,13 +118,13 @@ def predict(X_train, X_test, relevant_vectors, variance, mu, sigma, kernel_type,
     
     Basis = np.zeros((len(X_test), X_samples.shape[0]+1))
 
-    for i in tqdm(range(len(X_test))):
+    for i in range(len(X_test)):
         for j in range(len(X_samples)+1):
             if (j == 0):
                 Basis[i,j] = 1
             else:
                 Basis[i,j] = kernel(X_test[i], X_samples[j-1], kernel_type)
     
-    for i in tqdm(range(len(X_test))):
+    for i in range(len(X_test)):
         targets_predict[i] = np.dot(np.transpose(mu), Basis[i])
     return targets_predict
