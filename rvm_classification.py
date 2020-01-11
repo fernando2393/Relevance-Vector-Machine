@@ -32,6 +32,9 @@ class RVM_Classifier:
         self.test_data = None
         self.test_labels = None
 
+        # Prediction
+        self.prediction = None
+
     def set_training_data(self, training_data, training_labels):
         self.training_data = training_data
         self.training_labels = training_labels
@@ -206,9 +209,9 @@ class RVM_Classifier:
                 print("Training done, it converged. Nr iterations: " + str(i + 1))
                 break
 
-    def predict(self, data=[], use_training=False):
+    def predict(self, data=[], use_predifined_training=False):
         if data == []:
-            if use_training:
+            if use_predifined_training:
                 data = self.training_data
             else:
                 data = self.test_data
@@ -221,6 +224,7 @@ class RVM_Classifier:
 
         y = self.y_function(self.weight, phi)
         pred = np.where(y > 0.5, 1, 0)
+        self.prediction = pred
         return pred
 
     def plot(self, data=[], target=[]):
@@ -265,9 +269,16 @@ class RVM_Classifier:
         plt.legend()
         plt.show()
 
-    def get_prediction_error_rate(self, predicted_targets, true_targets):
+    def get_prediction_error_rate(self, predicted_targets=[], true_targets=[], use_predefined_training=False):
+        if predicted_targets == [] and true_targets == []:
+            predicted_targets = self.prediction
+            if use_predefined_training:
+                true_targets = self.training_labels
+            else:
+                true_targets = self.test_labels
+
         nr_correct = 0
         for i in range(len(predicted_targets)):
             if predicted_targets[i] == true_targets[i]:
                 nr_correct += 1
-        return nr_correct / len(predicted_targets)
+        return 1 - nr_correct / len(predicted_targets)

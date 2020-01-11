@@ -2,11 +2,11 @@ import numpy as np
 
 import rvm_classification
 
-test_data = np.loadtxt("datasets/ripley/ripley_test_data_other_guys.asc")
-test_target = np.loadtxt("datasets/ripley/ripley_test_labels_other_guys.asc")
-
-train_data = np.loadtxt("datasets/ripley/ripley_train_data_other_guys.asc")
-train_target = np.loadtxt("datasets/ripley/ripley_train_labels_other_guys.asc")
+# test_data = np.loadtxt("datasets/ripley/ripley_test_data_other_guys.asc")
+# test_target = np.loadtxt("datasets/ripley/ripley_test_labels_other_guys.asc")
+#
+# train_data = np.loadtxt("datasets/ripley/ripley_train_data_other_guys.asc")
+# train_target = np.loadtxt("datasets/ripley/ripley_train_labels_other_guys.asc")
 
 rvc = rvm_classification.RVM_Classifier()
 
@@ -19,6 +19,6 @@ rvc.fit()
 # rvc.plot(test_data, test_target)
 # rvc.plot(train_data, train_target)
 # rvc.plot()
-prediction = rvc.predict(use_training=False)
-error_rate = rvc.get_prediction_error_rate(prediction, train_target)
+prediction = rvc.predict(use_predifined_training=False)
+error_rate = rvc.get_prediction_error_rate(use_predefined_training=False)
 print("Error rate is: " + str(error_rate))
