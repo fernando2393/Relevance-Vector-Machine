@@ -2,6 +2,7 @@ import random
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from scipy.optimize import minimize
 from scipy.special import expit
 from tqdm import tqdm as tqdm
@@ -41,17 +42,32 @@ class RVM_Classifier:
         self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
 
     def set_predefined_training_data(self, data_set, data_set_index=1, nr_samples=None):
-        self.training_data = np.loadtxt(
-            "datasets/{data_set}/{data_set}_train_data_{index}.asc".format(data_set=data_set, index=data_set_index))
-        self.training_labels = np.loadtxt(
-            "datasets/{data_set}/{data_set}_train_labels_{index}.asc".format(data_set=data_set, index=data_set_index))
-        self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
+        if data_set == "pima":
+            data_training = pd.read_csv("datasets/pima/pima-training.csv", delim_whitespace=True)
+            data_training['type'] = data_training['type'].map({'Yes': 1, 'No': 0})  # Translating to boolean
+            data = data_training.values
+            self.training_data = data[:, :-1]
+            self.training_labels = data[:, -1]
 
-        self.test_data = np.loadtxt(
-            "datasets/{data_set}/{data_set}_test_data_{index}.asc".format(data_set=data_set, index=data_set_index))
-        self.test_labels = np.loadtxt(
-            "datasets/{data_set}/{data_set}_test_labels_{index}.asc".format(data_set=data_set, index=data_set_index))
-        self.test_labels[self.test_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
+            data_test = pd.read_csv("datasets/pima/pima-test.csv", delim_whitespace=True)
+            data_test['type'] = data_test['type'].map({'Yes': 1, 'No': 0})  # Translating to boolean
+            data = data_test.values
+            self.test_data = data[:, :-1]
+            self.test_labels = data[:, -1]
+        else:
+            self.training_data = np.loadtxt(
+                "datasets/{data_set}/{data_set}_train_data_{index}.asc".format(data_set=data_set, index=data_set_index))
+            self.training_labels = np.loadtxt(
+                "datasets/{data_set}/{data_set}_train_labels_{index}.asc".format(data_set=data_set,
+                                                                                 index=data_set_index))
+            self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
+
+            self.test_data = np.loadtxt(
+                "datasets/{data_set}/{data_set}_test_data_{index}.asc".format(data_set=data_set, index=data_set_index))
+            self.test_labels = np.loadtxt(
+                "datasets/{data_set}/{data_set}_test_labels_{index}.asc".format(data_set=data_set,
+                                                                                index=data_set_index))
+            self.test_labels[self.test_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
 
         if nr_samples is not None:
             random__training_data, random_training_target = self.get_nr_random_samples(self.training_data,
@@ -217,11 +233,6 @@ class RVM_Classifier:
                 data = self.test_data
 
         phi = self.phi_function(data, self.relevance_vector, True)
-        # Don't know what this means
-        # if not self.removed_bias:
-        #     bias_trick = np.ones((X.shape[0], 1))
-        #     phi = np.hstack((bias_trick, phi))
-
         y = self.y_function(self.weight, phi)
         pred = np.where(y > 0.5, 1, 0)
         self.prediction = pred
