@@ -52,6 +52,8 @@ print("Number of relevant vectors:", len(relevant_vectors)-1)
 # Generation of testing
 X_test = np.zeros((N_test, dimensions))
 y = np.zeros((N_test, tests))
+
+print("Running RVM testing...")
 for i in tqdm(range(tests)):
     X_test[:,0] = np.random.uniform(0,100, N_test)
     X_test[:,1] = np.random.uniform(40 * np.pi, 560 * np.pi, N_test)
@@ -75,7 +77,12 @@ plt.show()
 
 clf = svm.SVR(kernel=svm_methods.linear_spline)
 clf.fit(X_train, y_train)
-svm_pred = clf.predict(X_test)
+pred_array = list()
+
+print("Running SVM testing...")
+for it in tqdm(range(tests)):
+    pred_array.append(clf.predict(np.reshape(X_test, (len(X_test), dimensions))))
+svm_pred = np.array(pred_array).mean(axis=0)
 print('Number of support vectors:', len(clf.support_))
 # Check Performance SVM
 print('RMSE for SVM:', sqrt(mean_squared_error(y, svm_pred)))
