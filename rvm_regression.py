@@ -2,7 +2,7 @@ import numpy as np
 
 # Constants definition
 CONVERGENCE = 1e-3
-PRUNNING_THRESHOLD = 1e6
+PRUNNING_THRESHOLD = 1e9
 
 def initializeAlpha(N):
     # Initialization of alpha assuming uniform scale priors
@@ -35,15 +35,15 @@ def calculateSigma(variance, Basis, A): # Already squared
 def calculateMu(variance, Sigma, Basis, targets, N):
     return pow(variance, -1) * np.dot(np.dot(Sigma, np.transpose(Basis)), targets)
 
-def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis, N):
+def updateHyperparameters(Sigma, alpha, mu, targets, Basis, N):
     # Update gammas
     
-    gamma = np.zeros(len(alpha_old))
+    gamma = np.zeros(len(alpha))
     for i in range(len(gamma)):
-        gamma[i] = 1 - alpha_old[i] * Sigma[i,i]
+        gamma[i] = 1 - alpha[i] * Sigma[i,i]
 
     # Update alphas
-    alpha = np.zeros(len(alpha_old))
+    alpha = np.zeros(len(alpha))
     for i in range(len(alpha)):
         alpha[i] = gamma[i] / pow(mu[i], 2)
 
@@ -53,6 +53,10 @@ def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis, N):
     return alpha, variance
 
 def computeLogLikelihood(targets, variance, Basis, A, N):
+    '''
+    In some scenarios this convergency criteria doesn't
+    satisfy.Therefore we converged based on alphas
+    '''
     # Compute the Log Likelihood
     posterior_weight_cov = np.linalg.inv(A + np.dot(variance, np.dot(np.transpose(Basis), Basis)))
     posterior_weight_mean = np.dot(variance, np.dot(posterior_weight_cov, np.dot(np.transpose(Basis), targets)))
@@ -61,7 +65,7 @@ def computeLogLikelihood(targets, variance, Basis, A, N):
     result = -1/2 * (first_term + second_term)
     return result
 
-def prunning(alpha, Basis):
+def prunning(alpha, Basis, alpha_old):
     index = []
     for i in range(len(alpha[0])):
         if (i != 0 and alpha[0][i] > PRUNNING_THRESHOLD):
@@ -69,7 +73,8 @@ def prunning(alpha, Basis):
 
     alpha = np.delete(alpha, index, 1)
     Basis = np.delete(Basis, index, 1)
-    return alpha, Basis
+    alpha_old = np.delete(alpha_old, index, 0)
+    return alpha, Basis, alpha_old
 
 def fit(X, variance, targets, kernel, N):
     prob = 0
@@ -79,19 +84,20 @@ def fit(X, variance, targets, kernel, N):
     sigma = calculateSigma(variance, Basis, A)
     mu = calculateMu(variance, sigma, Basis, targets, N)
     cnt = 0
-    old_alpha = float('inf')
+    alpha_old = alpha[0].copy()
     while (True):
         alpha[0], variance = updateHyperparameters(sigma, alpha[0], mu, targets, Basis, N)
-        alpha, Basis = prunning(alpha, Basis)
+        alpha, Basis, alpha_old = prunning(alpha, Basis, alpha_old)
         A = calculateA(alpha[0])
         sigma = calculateSigma(variance, Basis, A)
         mu = calculateMu(variance, sigma, Basis, targets, N)
         # prob = computeLogLikelihood(targets, variance, Basis, A, N)
-        if (abs(alpha[0,0] - old_alpha) < CONVERGENCE): # Condition for convergence
+        diff = np.absolute(max(alpha[0]) - max(alpha_old))
+        if (diff < CONVERGENCE and cnt > 100): # Condition for convergence
             break
         if (cnt%1000 == 0 and cnt != 0):
-            print('Difference:', abs(max(alpha[0]) - old_alpha))
-        old_alpha = alpha[0,0]
+            print('Difference:', diff)
+        alpha_old = alpha[0].copy()
         cnt += 1
     print("Iterations:", cnt)
     return alpha, variance, mu, sigma
@@ -112,7 +118,5 @@ def predict(X_train, X_test, relevant_vectors, variance, mu, sigma, kernel_type,
                 Basis[i,j] = kernel(X_test[i], X_samples[j-1], kernel_type)
 
     for i in range(len(X_test)):
-        mean = np.dot(np.transpose(mu), Basis[i])
-        var = variance + np.dot(np.dot(np.transpose(Basis[i]), sigma), Basis[i])
-        targets_predict[i] = np.random.normal(mean, var)
+        targets_predict[i] = np.dot(np.transpose(mu), Basis[i])
     return targets_predict
