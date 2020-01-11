@@ -11,9 +11,9 @@ from sklearn.svm import SVR
 import itertools
 
 # Initialize variable
-N = 10
+N = 100
 dimensions = 2
-N_test = 100
+N_test = 1000
 
 X_1 = np.linspace(-10,10,N) # Training
 X_2 = np.linspace(-10,10,N) # Training
@@ -64,5 +64,6 @@ ax.plot_trisurf(X_test[:,0], X_test[:,1], y, cmap=plt.cm.viridis, linewidth=0.2)
 ax.scatter(X[:,0], X[:,1], targets, cmap=plt.cm.viridis, linewidth=0.2, label='Training points')
 ax.view_init(30, -50)
 ax.set_xlabel('x1'); ax.set_ylabel('x2'); ax.set_zlabel('y')
+plt.title("Extension Data Set")
 plt.legend()
 plt.show()
