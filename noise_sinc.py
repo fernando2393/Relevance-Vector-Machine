@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 from math import sqrt
 from tqdm import tqdm
+from sklearn.svm import SVR
 
 # Initialize variable
 N = 100
@@ -38,6 +39,7 @@ for it in tqdm(range(tests)):
 pred_mean = np.array(pred_array).mean(axis=0)
 print('RMSE:', sqrt(mean_squared_error(y, pred_mean)))
 print('Maximum error between predicted samples and true: ', max(abs(y-pred_mean))**2)
+print('Number of relevant vectors:', len(relevant_vectors)-1)
 plt.plot(X_test, pred_mean, c='r', label='Predicted values')
 plt.scatter(X, targets, label='Training samples')
 plt.plot(X_test, y, c='black', label='True function')
@@ -47,3 +49,5 @@ plt.ylabel('Target')
 plt.legend()
 plt.title('sinc(x) dataset with noise')
 plt.show()
+
+############## Comparisson with SVM from Scikit-Learn ##############

@@ -1,7 +1,7 @@
 import numpy as np
 
 # Constants definition
-CONVERGENCE = 1e-9
+CONVERGENCE = 1e-3
 PRUNNING_THRESHOLD = 1e6
 
 def initializeAlpha(N):
@@ -52,10 +52,13 @@ def updateHyperparameters(Sigma, alpha_old, mu, targets, Basis, N):
 
     return alpha, variance
 
-def computeLogLikelihood(targets, variance, Basis, A):
+def computeLogLikelihood(targets, variance, Basis, A, N):
     # Compute the Log Likelihood
-    mat = variance * np.identity(len(targets)) + np.dot(np.dot(Basis, np.linalg.inv(A + np.eye(A.shape[1])*1e-10)), np.transpose(Basis))
-    result = -1/2 * np.log(np.linalg.det(mat + np.eye(mat.shape[1])*1e-10) + np.dot(np.transpose(targets), np.dot(np.linalg.inv(mat + np.eye(mat.shape[1])*1e-10), targets)))
+    posterior_weight_cov = np.linalg.inv(A + np.dot(variance, np.dot(np.transpose(Basis), Basis)))
+    posterior_weight_mean = np.dot(variance, np.dot(posterior_weight_cov, np.dot(np.transpose(Basis), targets)))
+    first_term = - np.log(np.linalg.det(posterior_weight_cov)) - N * np.log(variance) - np.log(np.linalg.det(A))
+    second_term = np.dot(variance, pow(np.linalg.norm(targets - np.dot(Basis, posterior_weight_mean)), 2)) + np.dot(np.transpose(posterior_weight_mean), np.dot(A, posterior_weight_mean))
+    result = -1/2 * (first_term + second_term)
     return result
 
 def prunning(alpha, Basis):
@@ -69,7 +72,6 @@ def prunning(alpha, Basis):
     return alpha, Basis
 
 def fit(X, variance, targets, kernel, N):
-    previous_prob = float('inf')
     prob = 0
     alpha = initializeAlpha(N)
     Basis = calculateBasisFunction(X, kernel)
@@ -77,16 +79,19 @@ def fit(X, variance, targets, kernel, N):
     sigma = calculateSigma(variance, Basis, A)
     mu = calculateMu(variance, sigma, Basis, targets, N)
     cnt = 0
-    while (cnt<10000):
+    old_alpha = float('inf')
+    while (True):
         alpha[0], variance = updateHyperparameters(sigma, alpha[0], mu, targets, Basis, N)
         alpha, Basis = prunning(alpha, Basis)
         A = calculateA(alpha[0])
         sigma = calculateSigma(variance, Basis, A)
         mu = calculateMu(variance, sigma, Basis, targets, N)
-        #prob = computeLogLikelihood(targets, variance, Basis, A)
-        if (abs(prob - previous_prob) < CONVERGENCE): # Condition for convergence
+        # prob = computeLogLikelihood(targets, variance, Basis, A, N)
+        if (abs(alpha[0,0] - old_alpha) < CONVERGENCE): # Condition for convergence
             break
-        previous_prob = prob
+        if (cnt%1000 == 0 and cnt != 0):
+            print('Difference:', abs(max(alpha[0]) - old_alpha))
+        old_alpha = alpha[0,0]
         cnt += 1
     print("Iterations:", cnt)
     return alpha, variance, mu, sigma
