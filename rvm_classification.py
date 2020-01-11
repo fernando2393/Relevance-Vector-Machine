@@ -8,10 +8,6 @@ import Kernel
 
 
 class RVM_Classifier:
-    """
-        Relevance Vector Machine - Classification
-
-    """
 
     def __init__(self):
 
@@ -37,19 +33,20 @@ class RVM_Classifier:
     def set_training_data(self, training_data, training_labels):
         self.training_data = training_data
         self.training_labels = training_labels
-        # TODO sanitize targeet
-        # T[T == -1] = 0
+        self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
 
     def set_predefined_training_data(self, data_set, data_set_index=1):
-
         self.training_data = np.loadtxt(
             "datasets/{data_set}/{data_set}_train_data_{index}.asc".format(data_set=data_set, index=data_set_index))
         self.training_labels = np.loadtxt(
             "datasets/{data_set}/{data_set}_train_labels_{index}.asc".format(data_set=data_set, index=data_set_index))
+        self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
+
         self.test_data = np.loadtxt(
             "datasets/{data_set}/{data_set}_test_data_{index}.asc".format(data_set=data_set, index=data_set_index))
         self.test_labels = np.loadtxt(
             "datasets/{data_set}/{data_set}_test_labels_{index}.asc".format(data_set=data_set, index=data_set_index))
+        self.test_labels[self.test_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
 
     # From formula 16
     def recalculate_alphas_function(self, gamma, weights):
@@ -177,13 +174,13 @@ class RVM_Classifier:
 
             self.prune()
 
-            difference = np.amax(np.abs(self.alphas - self.alphas_old)) # Need to change this
+            difference = np.amax(np.abs(self.alphas - self.alphas_old))  # Need to change this
             if difference < threshold:
                 print("Training done, it converged. Nr iterations: " + str(i + 1))
                 break
 
     def predict(self, X):
-        phi = self.phi_function(X, self.relevance_vector)
+        phi = self.phi_function(X, self.relevance_vector, False)
         # Don't know what this means
         # if not self.removed_bias:
         #     bias_trick = np.ones((X.shape[0], 1))
@@ -197,9 +194,8 @@ class RVM_Classifier:
         if data == [] and target == []:
             data = self.test_data
             target = self.test_labels
-
-        # Todo sanitize target always
-        #  T[T == -1] = 0
+        else:
+            target[target == -1] = 0  # Sanitize labels, some use -1 and some use 0
 
         # Format data so we can plot it
         print("Will start plotting")
