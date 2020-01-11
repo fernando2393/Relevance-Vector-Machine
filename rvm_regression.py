@@ -80,18 +80,18 @@ def fit(X, variance, targets, kernel, N):
     mu = calculateMu(variance, sigma, Basis, targets, N)
     cnt = 0
     old_alpha = float('inf')
-    while (True):
+    while (cnt < 1000): # Stopping criterion
         alpha[0], variance = updateHyperparameters(sigma, alpha[0], mu, targets, Basis, N)
         alpha, Basis = prunning(alpha, Basis)
         A = calculateA(alpha[0])
         sigma = calculateSigma(variance, Basis, A)
         mu = calculateMu(variance, sigma, Basis, targets, N)
         # prob = computeLogLikelihood(targets, variance, Basis, A, N)
-        if (abs(alpha[0,0] - old_alpha) < CONVERGENCE): # Condition for convergence
-            break
-        if (cnt%1000 == 0 and cnt != 0):
-            print('Difference:', abs(max(alpha[0]) - old_alpha))
-        old_alpha = alpha[0,0]
+        #if (abs(alpha[0,0] - old_alpha) < CONVERGENCE): # Condition for convergence
+        #    break
+        #if (cnt%1000 == 0 and cnt != 0):
+        #    print('Difference:', abs(max(alpha[0]) - old_alpha))
+        # old_alpha = alpha[0,0]
         cnt += 1
     print("Iterations:", cnt)
     return alpha, variance, mu, sigma

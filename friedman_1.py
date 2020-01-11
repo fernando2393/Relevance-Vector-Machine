@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
 from math import sqrt
 from tqdm import tqdm
+from sklearn import svm
 
 # Initialize variable
 N_pred = 240
@@ -54,9 +55,21 @@ target_pred = rvm_r.predict(X_train, X_pred, relevant_vectors, variance_mp, mu_m
 
 # Check Performance
 print('RMSE:', sqrt(mean_squared_error(true_target, target_pred)))
-print('Number of relevant vectors:', len(relevant_vectors))
+print('Number of relevant vectors:', len(relevant_vectors)-1)
 plt.scatter(range(N_test), true_target, label='Real')
-plt.scatter(range(N_test), target_pred, c='orange', label='Predited')
+plt.scatter(range(N_test), target_pred, c='orange', label='Predicted')
+plt.legend()
+plt.show()
+
+# Performance with SVM from sklearn
+clf = svm.SVR()
+clf.fit(X_train, target_train)
+svm_predict = clf.predict(X_pred)
+print('Number of support vectors:', len(clf.support_vectors_))
+# Check Performance SVM
+print('RMSE for SVM:', sqrt(mean_squared_error(true_target, svm_predict)))
+plt.scatter(range(N_test), true_target, label='Real')
+plt.scatter(range(N_test), svm_predict, c='orange', label='Predicted')
 plt.legend()
 plt.show()
 
