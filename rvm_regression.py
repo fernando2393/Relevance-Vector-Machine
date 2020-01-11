@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 
 # Constants definition
 CONVERGENCE = 1e-3
@@ -12,12 +13,19 @@ def kernel(x_m, x_n, kernel_type):
     if (kernel_type == "linear_spline"):
         xmin = np.minimum(x_m, x_n)
         compute_kernel = 1 + x_m * x_n + x_m * x_n * xmin - ((x_m + x_n) / 2) * pow(xmin, 2) + pow(xmin, 3) / 3
-        
+    elif (kernel_type == "exponential"):
+        eta_1 = 997*1e-4 
+        eta_2 = 2*1e-4
+        xmin_1 = np.minimum(x_m[0], x_n[0])
+        xmin_2 = np.minimum(x_m[1], x_n[1])
+        compute_kernel = np.exp(- eta_1*pow(xmin_1, 2) - eta_2*pow(xmin_2, 2))
+    else:
+        print("Please, select an suitable kernel")
     return compute_kernel.prod()
 
 def calculateBasisFunction(X, kernel_type):
     Basis = np.zeros((X.shape[0], X.shape[0]))
-    for i in range(Basis.shape[0]):
+    for i in tqdm(range(Basis.shape[0])):
         for j in range(Basis.shape[1]):
             Basis[i,j] = kernel(X[i], X[j], kernel_type)
 
@@ -77,7 +85,6 @@ def prunning(alpha, Basis, alpha_old):
     return alpha, Basis, alpha_old
 
 def fit(X, variance, targets, kernel, N):
-    prob = 0
     alpha = initializeAlpha(N)
     Basis = calculateBasisFunction(X, kernel)
     A = calculateA(alpha[0])
@@ -85,7 +92,7 @@ def fit(X, variance, targets, kernel, N):
     mu = calculateMu(variance, sigma, Basis, targets, N)
     cnt = 0
     alpha_old = alpha[0].copy()
-    while (True):
+    while (True and cnt < 1000):
         alpha[0], variance = updateHyperparameters(sigma, alpha[0], mu, targets, Basis, N)
         alpha, Basis, alpha_old = prunning(alpha, Basis, alpha_old)
         A = calculateA(alpha[0])
@@ -110,13 +117,14 @@ def predict(X_train, X_test, relevant_vectors, variance, mu, sigma, kernel_type,
         X_samples[i-1] = X_train[relevant_vectors[i]-1]
     
     Basis = np.zeros((len(X_test), X_samples.shape[0]+1))
-    for i in range(len(X_test)):
+
+    for i in tqdm(range(len(X_test))):
         for j in range(len(X_samples)+1):
             if (j == 0):
                 Basis[i,j] = 1
             else:
                 Basis[i,j] = kernel(X_test[i], X_samples[j-1], kernel_type)
-
-    for i in range(len(X_test)):
+    
+    for i in tqdm(range(len(X_test))):
         targets_predict[i] = np.dot(np.transpose(mu), Basis[i])
     return targets_predict
