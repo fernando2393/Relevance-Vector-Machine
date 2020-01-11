@@ -11,9 +11,9 @@ from sklearn.svm import SVR
 import itertools
 
 # Initialize variable
-N = 100
+N = 10
 dimensions = 2
-N_test = 1000
+N_test = 100
 
 X_1 = np.linspace(-10,10,N) # Training
 X_2 = np.linspace(-10,10,N) # Training
