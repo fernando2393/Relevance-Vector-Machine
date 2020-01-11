@@ -6,6 +6,7 @@ from sklearn.metrics import mean_squared_error
 from math import sqrt
 from tqdm import tqdm
 from sklearn import svm
+import svm_methods
 
 # Initialize variable
 N = 100
@@ -53,13 +54,13 @@ plt.show()
 ############## Comparisson with SVM from Scikit-Learn ##############
 
 # Performance with SVM from sklearn
-clf = svm.SVR()
+clf = svm.SVR(kernel=svm_methods.kernel)
 clf.fit(np.reshape(X, (len(X), 1)), np.reshape(targets, (len(targets), 1)))
 svm_predict = clf.predict(np.reshape(X_test, (len(X_test), 1)))
-print('Number of support vectors:', len(clf.support_vectors_))
+print('Number of support vectors:', len(clf.support_))
 # Check Performance SVM
 print('RMSE for SVM:', sqrt(mean_squared_error(targets_test, svm_predict)))
 plt.scatter(range(N_test), targets_test, label='Real')
-plt.scatter(range(N_test), svm_predict, c='orange', label='Predicted')
+plt.scatter(range(N_test), svm_predict, c='orange', label='Predicted SVM')
 plt.legend()
 plt.show()
