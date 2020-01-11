@@ -9,7 +9,8 @@ from tqdm import tqdm
 from sklearn.datasets import load_boston
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
-
+from sklearn import svm
+import svm_methods
 
 # Importing Boston Housing data set
 boston_dataset = load_boston()
@@ -42,4 +43,17 @@ target_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_m
 
 # Check Performance
 print('RMSE:', sqrt(mean_squared_error(y_test, target_pred)))
-print('Number of relevant vectors: ', len(relevant_vectors))
+print('Number of relevant vectors:', len(relevant_vectors))
+
+# Performance with SVM from sklearn
+clf = svm.SVR(kernel=svm_methods.kernel)
+clf.fit(X_train, y_train)
+svm_predict = clf.predict(X_test)
+print('Number of support vectors:', len(clf.support_))
+# Check Performance SVM
+print('RMSE for SVM:', sqrt(mean_squared_error(y_test, svm_predict)))
+plt.scatter(range(len(y_test)), y_test, label='Real')
+plt.scatter(range(len(svm_predict)), svm_predict, c='orange', label='Predicted SVM')
+plt.scatter(range(len(target_pred)), target_pred, c='green', label='Predicted RVM')
+plt.legend()
+plt.show()

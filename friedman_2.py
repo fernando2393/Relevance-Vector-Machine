@@ -7,6 +7,7 @@ from math import sqrt
 from tqdm import tqdm
 from sklearn import preprocessing
 from sklearn import svm
+import svm_methods
 
 num_iterations = 100
 training_samples = 240
@@ -44,7 +45,7 @@ training_targets = np.reshape(training_targets, (len(training_targets),1))
 MinMaxScaler = preprocessing.MinMaxScaler()
 X_training = MinMaxScaler.fit_transform(X_training)
 
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_training, variance, training_targets, kernel, training_samples)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_training, variance, training_targets, kernel, X_training.shape[0])
 relevant_vectors = alpha[1].astype(int)
 print("Number of relevant vectors:", len(relevant_vectors)-1)
 
@@ -64,20 +65,21 @@ for i in tqdm(range(num_iterations)):
 y = y.mean(axis=1)
 pred_mean = np.array(pred_array).mean(axis=0)
 
-print('RMSE:', sqrt(mean_squared_error(y, pred_mean)))
+print('RMSE for RVM:', sqrt(mean_squared_error(y, pred_mean)))
 plt.scatter(range(test_samples), y, label='Real')
-plt.scatter(range(test_samples), pred_mean, c='orange', label='Predited')
+plt.scatter(range(test_samples), pred_mean, c='green', label='Predicted RVM')
 plt.legend()
 plt.show()
 
 # Performance with SVM from sklearn
-clf = svm.SVR(kernel='linear_spline')
+
+clf = svm.SVR(kernel=svm_methods.kernel)
 clf.fit(X_training, training_targets)
 svm_predict = clf.predict(X_test)
-print('Number of support vectors:', len(clf.support_vectors_))
+print('Number of support vectors:', len(clf.support_))
 # Check Performance SVM
 print('RMSE for SVM:', sqrt(mean_squared_error(y, svm_predict)))
-plt.scatter(range(test_samples), y, label='Real')
-plt.scatter(range(test_samples), svm_predict, c='orange', label='Predicted')
+plt.scatter(range(len(y)), y, label='Real')
+plt.scatter(range(len(svm_predict)), svm_predict, c='orange', label='Predicted SVM')
 plt.legend()
 plt.show()

@@ -6,6 +6,7 @@ from sklearn.metrics import mean_squared_error
 from math import sqrt
 from tqdm import tqdm
 from sklearn import preprocessing
+from sklearn import svm
 
 num_iterations = 100
 training_samples = 240
@@ -66,4 +67,16 @@ pred_mean = np.array(pred_array).mean(axis=0)
 print('RMSE:', sqrt(mean_squared_error(y, pred_mean)))
 plt.plot(range(test_samples), y)
 plt.scatter(range(test_samples), pred_mean, c='orange')
+plt.show()
+
+# Performance with SVM from sklearn
+clf = svm.SVR()
+clf.fit(X_training, training_targets)
+svm_predict = clf.predict(X_test)
+print('Number of support vectors:', len(clf.support_vectors_))
+# Check Performance SVM
+print('RMSE for SVM:', sqrt(mean_squared_error(y, svm_predict)))
+plt.scatter(range(test_samples), y, label='Real')
+plt.scatter(range(test_samples), svm_predict, c='orange', label='Predicted')
+plt.legend()
 plt.show()
