@@ -1,9 +1,10 @@
+import random
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import minimize
 from scipy.special import expit
 from tqdm import tqdm as tqdm
-import random
 
 import Kernel
 
@@ -50,14 +51,15 @@ class RVM_Classifier:
         self.test_labels[self.test_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
 
         if nr_samples is not None:
-            random__training_data, random_training_target = self.get_nr_random_samples(self.training_data, self.training_labels, nr_samples)
+            random__training_data, random_training_target = self.get_nr_random_samples(self.training_data,
+                                                                                       self.training_labels, nr_samples)
             self.training_data = random__training_data
             self.training_labels = random_training_target
 
-            random__test_data, random_test_target = self.get_nr_random_samples(self.test_data, self.test_labels, nr_samples)
+            random__test_data, random_test_target = self.get_nr_random_samples(self.test_data, self.test_labels,
+                                                                               nr_samples)
             self.test_data = random__test_data
             self.test_labels = random_test_target
-
 
     def get_nr_random_samples(self, data, target, nr_samples):
         total_nr_samples = data.shape[0]
@@ -72,7 +74,6 @@ class RVM_Classifier:
         random_data = np.array(random_data)
         random_target = np.array(random_target)
         return random_data, random_target
-
 
     # From formula 16
     def recalculate_alphas_function(self, gamma, weights):
@@ -91,7 +92,7 @@ class RVM_Classifier:
     def beta_matrix_function(self, y, N):
         beta_matrix = np.zeros((N, N))
         for n in range(N):
-            beta_matrix[n][n] = expit(y[n]) * (1 - expit(y[n]))
+            beta_matrix[n][n] = y[n] * (1 - y[n])
         return beta_matrix
 
     def phi_function(self, x, y, add=False):
@@ -205,8 +206,14 @@ class RVM_Classifier:
                 print("Training done, it converged. Nr iterations: " + str(i + 1))
                 break
 
-    def predict(self, X):
-        phi = self.phi_function(X, self.relevance_vector, False)
+    def predict(self, data=[], use_training=False):
+        if data == []:
+            if use_training:
+                data = self.training_data
+            else:
+                data = self.test_data
+
+        phi = self.phi_function(data, self.relevance_vector, True)
         # Don't know what this means
         # if not self.removed_bias:
         #     bias_trick = np.ones((X.shape[0], 1))
@@ -257,3 +264,10 @@ class RVM_Classifier:
         plt.ylabel("Heelloooo lets goo")
         plt.legend()
         plt.show()
+
+    def get_prediction_error_rate(self, predicted_targets, true_targets):
+        nr_correct = 0
+        for i in range(len(predicted_targets)):
+            if predicted_targets[i] == true_targets[i]:
+                nr_correct += 1
+        return nr_correct / len(predicted_targets)
