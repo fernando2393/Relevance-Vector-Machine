@@ -45,7 +45,7 @@ X_training = MinMaxScaler.fit_transform(X_training)
 
 alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_training, variance, training_targets, kernel, training_samples)
 relevant_vectors = alpha[1].astype(int)
-print("Number of relevant vectors:", len(relevant_vectors))
+print("Number of relevant vectors:", len(relevant_vectors)-1)
 
 # Generation of testing
 X_test = np.zeros((test_samples, dimensions))
