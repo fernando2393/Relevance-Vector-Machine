@@ -27,8 +27,8 @@ rvc = rvm_classification.RVM_Classifier()
 
 relevance_vectors = []
 errors = []
-nr_iterations = 10
-data_set = "image"
+nr_iterations = 3
+data_set = "breast-cancer"
 for i in range(nr_iterations):
     rvc = rvm_classification.RVM_Classifier()
     # print("Running training on data set: " + data_set + " index: " + str(i+1))

@@ -11,16 +11,17 @@ import Kernel
 
 
 class RVM_Classifier:
+    """
+        Relevance vector machine classifier
+    """
 
     def __init__(self):
 
-        # Alphas pruning threshold.
-        self.threshold_alpha = 1e9
+        self.threshold_alpha = 1e12
 
-        # True if bias was pruned.
+        # If the bias is pruned we set this to True
         self.removed_bias = False
 
-        # Prior variances (weights).
         self.alphas = None
         self.alphas_old = None
         self.phi = None
@@ -33,13 +34,13 @@ class RVM_Classifier:
         self.test_data = None
         self.test_labels = None
 
-        # Prediction
+        # The prediction is stored here
         self.prediction = None
 
     def set_training_data(self, training_data, training_labels):
         self.training_data = training_data
         self.training_labels = training_labels
-        self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
+        self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 so we force it to 0
 
     def set_predefined_training_data(self, data_set, data_set_index=1, nr_samples=None):
         if data_set == "pima":
@@ -67,24 +68,24 @@ class RVM_Classifier:
             self.training_labels = np.loadtxt(
                 "datasets/{data_set}/{data_set}_train_labels_{index}.asc".format(data_set=data_set,
                                                                                  index=data_set_index))
-            self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
+            self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 so we force it to 0
 
             self.test_data = np.loadtxt(
                 "datasets/{data_set}/{data_set}_test_data_{index}.asc".format(data_set=data_set, index=data_set_index))
             self.test_labels = np.loadtxt(
                 "datasets/{data_set}/{data_set}_test_labels_{index}.asc".format(data_set=data_set,
                                                                                 index=data_set_index))
-            self.test_labels[self.test_labels == -1] = 0  # Sanitize labels, some use -1 and some use 0
+            self.test_labels[self.test_labels == -1] = 0  # Sanitize labels, some use -1 so we force it to 0
 
         if nr_samples is not None:
-            random__training_data, random_training_target = self.get_nr_random_samples(self.training_data,
-                                                                                       self.training_labels, nr_samples)
-            self.training_data = random__training_data
+            random_training_data, random_training_target = self.get_nr_random_samples(self.training_data,
+                                                                                      self.training_labels, nr_samples)
+            self.training_data = random_training_data
             self.training_labels = random_training_target
 
-            random__test_data, random_test_target = self.get_nr_random_samples(self.test_data, self.test_labels,
-                                                                               nr_samples)
-            self.test_data = random__test_data
+            random_test_data, random_test_target = self.get_nr_random_samples(self.test_data, self.test_labels,
+                                                                              nr_samples)
+            self.test_data = random_test_data
             self.test_labels = random_test_target
 
     def get_nr_random_samples(self, data, target, nr_samples):
@@ -112,50 +113,48 @@ class RVM_Classifier:
     def gamma_function(self, alpha, sigma):
         return 1 - alpha * np.diag(sigma)
 
-    # Formula 26
+    # Formula 26. With alpha from below 13
     def sigma_function(self, phi, beta, alpha):
         b = np.linalg.multi_dot([phi.T, beta, phi])
         return np.linalg.inv(b + np.diag(alpha))
 
     # From under formula 25
-    def beta_matrix_function(self, y, N):
-        beta_matrix = np.zeros((N, N))
-        for n in range(N):
-            beta_matrix[n][n] = y[n] * (1 - y[n])
-        return beta_matrix
+    def beta_matrix_function(self, y):
+        return np.diag(y * (1 - y))
 
-    def phi_function(self, x, y):
-        if self.removed_bias:
-            return Kernel.radial_basis_kernel(x, y, 0.5)
+    # From under formula 4
+    def phi_function(self, x, y, thing=False):
         phi_kernel = Kernel.radial_basis_kernel(x, y, 0.5)
+        if self.removed_bias:
+        # if thing:
+            return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))
         return np.hstack((phi0, phi_kernel))
 
-    # Formula 2
+    # Formula 1
     def y_function(self, weight, phi):
-        y = expit(np.dot(phi, weight))  # Sigmoid function
+        y = expit(np.dot(phi, weight))  # Expit = sigmoid function
         return y
 
+    # Formula 24
     def log_posterior_function(self, weight, alpha, phi, target):
         y = self.y_function(weight, phi)
-        
+
         sum_y = np.zeros(2)
         y_1 = y[target == 1]
         sum_y[1] = np.sum(np.log(y_1))
         y_0 = y[target == 0]
         sum_y[0] = np.sum(np.log(1 - y_0))
-        
-        log_posterior = sum_y[1] + sum_y[0] - np.linalg.multi_dot([weight.T, np.diag(alpha), weight]) / 2
-        
+
+        log_posterior = sum_y[1] + sum_y[0] - (np.linalg.multi_dot([weight.T, np.diag(alpha), weight]) / 2)
         jacobian = np.dot(np.diag(alpha), weight) - np.dot(phi.T, (target - y))
-        
+
         return -log_posterior, jacobian
 
-    def hessian(self, mu_posterior, alphas, phi, T):
-        y = self.y_function(mu_posterior, phi)
-        #B = np.diag(y * (1 - y))
-        B = self.beta_matrix_function(y, self.training_data.shape[0])
-        return np.diag(alphas) + np.dot(phi.T, np.dot(B, phi))
+    def hessian(self, weights, alphas, phi, target):
+        y = self.y_function(weights, phi)
+        beta = self.beta_matrix_function(y)
+        return np.diag(alphas) + np.dot(phi.T, np.dot(beta, phi))
 
     def update_weights(self):
         result = minimize(
@@ -166,16 +165,35 @@ class RVM_Classifier:
             method='Newton-CG',
             jac=True,
             options={
-                'maxiter': 50
+                'maxiter': 75
             }
         )
         self.weight = result.x  # Updates the weights to the maximized (log is negative that is why we minimize)
-        sigma_posterior = np.linalg.inv(self.hessian(self.weight, self.alphas, self.phi, self.training_labels))
-        return sigma_posterior
 
-    def sigma_posterior_function(self):
-        sigma_posterior = np.linalg.inv(self.hessian(self.weight, self.alphas, self.phi, self.training_labels))
-        return sigma_posterior
+    def prune2(self):
+        index = []
+
+        prune_alpha = np.vstack((self.alphas, range(len(self.alphas))))
+        prune_alpha_old = np.vstack((self.alphas_old, range(len(self.alphas_old))))
+        for i in range(len(prune_alpha[0])):
+            if (i != 0 and prune_alpha[0][i] > self.threshold_alpha):
+                index.append(i)
+
+        self.phi = np.delete(self.phi, index, 1)
+        self.weight = np.delete(self.weight, index)
+        self.alphas = np.delete(prune_alpha, index, 1)[0,:]
+        self.alphas_old = np.delete(prune_alpha_old, index, 1)[0,:]
+
+        # if not self.removed_bias:
+        #     self.relevance_vector = self.relevance_vector[index[1:]]
+        # else:
+        #     self.relevance_vector = self.relevance_vector[index]
+        self.relevance_vector = np.delete(self.relevance_vector, index, 0)
+        ok =1
+        # if not index[0] == [] and not self.removed_bias:
+        #     self.removed_bias = True
+        # print("Bias removed")
+
 
     # This function needs to be changed
     def prune(self):
@@ -207,18 +225,18 @@ class RVM_Classifier:
 
         # Initialize uniformly
         self.alphas = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
+        # self.alphas = 1e-6 * np.ones(self.training_data.shape[0] +1)
         self.weight = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
 
-        max_training_iterations = 3000
+        max_training_iterations = 1000
         threshold = 1e-3
         for i in tqdm(range(max_training_iterations)):
             self.alphas_old = np.copy(self.alphas)
 
-            sigma_posterior = self.update_weights()
-            # sigma_posterior = self.sigma_posterior_function()  # Todo explore sigma_posterior bug
+            self.update_weights()
 
             y = self.y_function(self.weight, self.phi)
-            beta = self.beta_matrix_function(y, self.training_data.shape[0])
+            beta = self.beta_matrix_function(y)
             sigma = self.sigma_function(self.phi, beta, self.alphas)
 
             gammas = self.gamma_function(self.alphas, sigma)
@@ -238,7 +256,7 @@ class RVM_Classifier:
             else:
                 data = self.test_data
 
-        phi = self.phi_function(data, self.relevance_vector)
+        phi = self.phi_function(data, self.relevance_vector, True)
         y = self.y_function(self.weight, phi)
         pred = np.where(y > 0.5, 1, 0)
         self.prediction = pred
