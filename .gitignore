@@ -162,7 +162,7 @@ ipython_config.py
 # Markdown Navigator plugin
 
 ### VisualStudioCode ###
-.vscode/*
+.vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
@@ -171,6 +171,9 @@ ipython_config.py
 ### VisualStudioCode Patch ###
 # Ignore all local history of files
 .history
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
 
 # End of https://www.gitignore.io/api/pycharm,intellij,jupyternotebooks,visualstudiocode
 
