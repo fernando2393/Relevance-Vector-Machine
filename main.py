@@ -27,7 +27,7 @@ rvc = rvm_classification.RVM_Classifier()
 
 relevance_vectors = []
 errors = []
-nr_iterations = 3
+nr_iterations = 2
 data_set = "breast-cancer"
 for i in range(nr_iterations):
     rvc = rvm_classification.RVM_Classifier()

@@ -6,6 +6,7 @@ import pandas as pd
 from scipy.optimize import minimize
 from scipy.special import expit
 from tqdm import tqdm as tqdm
+from sklearn.metrics.pairwise import rbf_kernel
 
 import Kernel
 
@@ -17,7 +18,7 @@ class RVM_Classifier:
 
     def __init__(self):
 
-        self.threshold_alpha = 1e12
+        self.threshold_alpha = 1e9
 
         # If the bias is pruned we set this to True
         self.removed_bias = False
@@ -124,16 +125,20 @@ class RVM_Classifier:
 
     # From under formula 4
     def phi_function(self, x, y, thing=False):
-        phi_kernel = Kernel.radial_basis_kernel(x, y, 0.5)
+        #phi_kernel = Kernel.radial_basis_kernel(x, y, 0.5)
+        phi_kernel = rbf_kernel(x,y)
         if self.removed_bias:
         # if thing:
             return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))
         return np.hstack((phi0, phi_kernel))
 
+    def sigmoid(self,y):
+        return 1/(1+np.exp(-y))
+
     # Formula 1
     def y_function(self, weight, phi):
-        y = expit(np.dot(phi, weight))  # Expit = sigmoid function
+        y = self.sigmoid(np.dot(phi, weight)) 
         return y
 
     # Formula 24
@@ -154,7 +159,7 @@ class RVM_Classifier:
     def hessian(self, weights, alphas, phi, target):
         y = self.y_function(weights, phi)
         beta = self.beta_matrix_function(y)
-        return np.diag(alphas) + np.dot(phi.T, np.dot(beta, phi))
+        return np.diag(alphas) + np.linalg.multi_dot(phi.T, beta, phi)
 
     def update_weights(self):
         result = minimize(
@@ -216,17 +221,22 @@ class RVM_Classifier:
             self.removed_bias = True
             print("Bias removed")
 
+
+
     def fit(self):
         """
             Train the classifier
         """
+        
         self.relevance_vector = self.training_data
         self.phi = self.phi_function(self.training_data, self.training_data)
 
         # Initialize uniformly
+        #self.alphas = 1e-6 *np.ones((self.training_data.shape[0] + 1))
         self.alphas = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
-        # self.alphas = 1e-6 * np.ones(self.training_data.shape[0] +1)
+        #self.weight = np.zeros((self.training_data.shape[0] + 1))
         self.weight = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
+        
 
         max_training_iterations = 1000
         threshold = 1e-3
@@ -234,7 +244,6 @@ class RVM_Classifier:
             self.alphas_old = np.copy(self.alphas)
 
             self.update_weights()
-
             y = self.y_function(self.weight, self.phi)
             beta = self.beta_matrix_function(y)
             sigma = self.sigma_function(self.phi, beta, self.alphas)
