@@ -71,7 +71,7 @@ for seed in range(1000):
     y_pred = svclassifier.predict(test_data)
     predicted_error = get_prediction_error_rate(y_pred, test_labels)
     
-if predicted_error < predicted_error_aux:
+    if predicted_error < predicted_error_aux:
         best_seed = seed
         predicted_error_aux = predicted_error
 
