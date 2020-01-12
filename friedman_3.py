@@ -45,7 +45,7 @@ y_train = np.reshape(y_train, (len(y_train),1))
 MinMaxScaler = preprocessing.MinMaxScaler()
 X_train = MinMaxScaler.fit_transform(X_train)
 
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, N_train)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, N_train, dimensions)
 relevant_vectors = alpha[1].astype(int)
 print("Number of relevant vectors:", len(relevant_vectors)-1)
 

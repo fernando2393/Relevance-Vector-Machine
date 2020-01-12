@@ -38,7 +38,7 @@ X_test = np.zeros(((N_test)**2, 2))
 for i, x in enumerate(itertools.product(X_1_test, X_2_test)):
     X_test[i, :] = x
 
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, X_train.shape[0])
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, X_train.shape[0], dimensions)
 relevant_vectors = alpha[1].astype(int)
 
 y = np.zeros(X_test.shape[0])

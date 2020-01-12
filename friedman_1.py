@@ -47,7 +47,7 @@ y = (10*np.sin(np.pi*X_pred[:,0]*X_pred[:,1])
                 )
 
 # Fit
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, target_train, kernel, N_train)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, target_train, kernel, N_train, dimensions)
 relevant_vectors = alpha[1].astype(int)
 
 # Predict

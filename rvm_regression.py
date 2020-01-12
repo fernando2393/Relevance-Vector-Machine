@@ -9,7 +9,7 @@ def initializeAlpha(N):
     # Initialization of alpha assuming uniform scale priors
     return np.array([np.full(N+1,1e-4),np.arange(0,N+1,1)])
 
-def kernel(x_m, x_n, kernel_type):
+def kernel(x_m, x_n, kernel_type, dimensions):
     if (kernel_type == "linear_spline"):
         xmin = np.minimum(x_m, x_n)
         compute_kernel = 1 + x_m * x_n + x_m * x_n * xmin - ((x_m + x_n) / 2) * pow(xmin, 2) + pow(xmin, 3) / 3
@@ -19,15 +19,19 @@ def kernel(x_m, x_n, kernel_type):
         xmin_1 = np.minimum(x_m[0], x_n[0])
         xmin_2 = np.minimum(x_m[1], x_n[1])
         compute_kernel = np.exp(- eta_1*pow(xmin_1, 2) - eta_2*pow(xmin_2, 2))
+    elif (kernel_type == "gaussian"):
+        xmin = np.minimum(x_m, x_n)
+        gamma = 1/dimensions
+        compute_kernel =  np.exp(- 1 * gamma * pow(np.linalg.norm(xmin), 2)).prod()
     else:
         print("Please, select an suitable kernel")
     return compute_kernel.prod()
 
-def calculateBasisFunction(X, kernel_type):
+def calculateBasisFunction(X, kernel_type, dimensions):
     Basis = np.zeros((X.shape[0], X.shape[0]))
     for i in tqdm(range(Basis.shape[0])):
         for j in range(Basis.shape[1]):
-            Basis[i,j] = kernel(X[i], X[j], kernel_type)
+            Basis[i,j] = kernel(X[i], X[j], kernel_type, dimensions)
 
     weight_0 = np.ones((X.shape[0],1))
     Basis = np.hstack((weight_0, Basis))
@@ -84,9 +88,9 @@ def prunning(alpha, Basis, alpha_old):
     alpha_old = np.delete(alpha_old, index, 0)
     return alpha, Basis, alpha_old
 
-def fit(X, variance, targets, kernel, N):
+def fit(X, variance, targets, kernel, N, dimensions):
     alpha = initializeAlpha(N)
-    Basis = calculateBasisFunction(X, kernel)
+    Basis = calculateBasisFunction(X, kernel, dimensions)
     A = calculateA(alpha[0])
     sigma = calculateSigma(variance, Basis, A)
     mu = calculateMu(variance, sigma, Basis, targets, N)
@@ -123,7 +127,7 @@ def predict(X_train, X_test, relevant_vectors, variance, mu, sigma, kernel_type,
             if (j == 0):
                 Basis[i,j] = 1
             else:
-                Basis[i,j] = kernel(X_test[i], X_samples[j-1], kernel_type)
+                Basis[i,j] = kernel(X_test[i], X_samples[j-1], kernel_type, dimensions)
     
     for i in range(len(X_test)):
         targets_predict[i] = np.dot(np.transpose(mu), Basis[i])

@@ -35,7 +35,7 @@ dimensions = X_train.shape[1] #14
 N_test_size = X_test.shape[0]
 
 # Fit
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, N)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, N, dimensions)
 relevant_vectors = alpha[1].astype(int)
 
 # Predict
