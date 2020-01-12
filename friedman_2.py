@@ -17,7 +17,7 @@ variance = 0.01
 test_array = list()
 
 # Choose kernel between linear_spline or exponential
-kernel = "linear_spline"
+kernel = "gaussian"
 
 # Generation of traning set
 X_train = np.zeros((N_train, dimensions))
@@ -45,7 +45,7 @@ y_train = np.reshape(y_train, (len(y_train),1))
 MinMaxScaler = preprocessing.MinMaxScaler()
 X_train = MinMaxScaler.fit_transform(X_train)
 
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, X_train.shape[0], dimensions)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, X_train.shape[0], dimensions, N_test)
 relevant_vectors = alpha[1].astype(int)
 print("Number of relevant vectors:", len(relevant_vectors)-1)
 
@@ -64,7 +64,7 @@ X_test = np.array(test_array).mean(axis=0)
 y = pow(pow(X_test[:,0], 2) + pow(X_test[:,1] * 
     X_test[:,2] - 1 / (X_test[:,1] * X_test[:,3]), 2), 1/2)
 X_test = MinMaxScaler.fit_transform(X_test)
-y_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions)
+y_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions, N_test)
 
 print('RMSE for RVM:', sqrt(mean_squared_error(y, y_pred)))
 plt.scatter(range(N_test), y, label='Real')
@@ -73,7 +73,7 @@ plt.legend()
 plt.show()
 
 # Performance with SVM from sklearn
-clf = svm.SVR(kernel=svm_methods.linear_spline)
+clf = svm.SVR(kernel="rbf", gamma = (1/dimensions))
 clf.fit(X_train, y_train)
 print("Running SVM testing...")
 svm_pred = clf.predict(np.reshape(X_test, (len(X_test), dimensions)))

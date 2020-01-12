@@ -26,7 +26,7 @@ X_train = MinMaxScaler.fit_transform(X_train)
 X_test = MinMaxScaler.fit_transform(X_test)
 
 # Choose kernel between linear_spline or exponential
-kernel = "linear_spline"
+kernel = "gaussian"
 
 # Initialize variance
 variance = 0.01
@@ -35,18 +35,18 @@ dimensions = X_train.shape[1] #14
 N_test_size = X_test.shape[0]
 
 # Fit
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, N, dimensions)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, N, dimensions, N)
 relevant_vectors = alpha[1].astype(int)
 
 # Predict
-y_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions)
+y_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions, N)
 
 # Check Performance
 print('RMSE for RVM:', sqrt(mean_squared_error(y_test, y_pred)))
 print('Number of relevant vectors:', len(relevant_vectors))
 
 # Performance with SVM from sklearn
-clf = svm.SVR(kernel=svm_methods.linear_spline)
+clf = svm.SVR(kernel="rbf", gamma = (1/dimensions))
 clf.fit(X_train, y_train)
 svm_pred = clf.predict(X_test)
 print('Number of support vectors:', len(clf.support_))

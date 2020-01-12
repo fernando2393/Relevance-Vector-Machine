@@ -15,7 +15,7 @@ dimensions = 10
 variance = 0.01
 
 # Choose kernel between linear_spline or exponential
-kernel = "linear_spline"
+kernel = "gaussian"
 
 X_train = np.zeros((N_train, dimensions)) # Training
 for i in range(N_train):
@@ -47,11 +47,11 @@ y = (10*np.sin(np.pi*X_pred[:,0]*X_pred[:,1])
                 )
 
 # Fit
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, target_train, kernel, N_train, dimensions)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, target_train, kernel, N_train, dimensions, N_test)
 relevant_vectors = alpha[1].astype(int)
 
 # Predict
-y_pred = rvm_r.predict(X_train, X_pred, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions)
+y_pred = rvm_r.predict(X_train, X_pred, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions, N_test)
 
 # Check Performance
 print('RMSE:', sqrt(mean_squared_error(y, y_pred)))
@@ -62,7 +62,7 @@ plt.legend()
 plt.show()
 
 # Performance with SVM from sklearn
-clf = svm.SVR()
+clf = svm.SVR(kernel="rbf", gamma = (1/dimensions))
 clf.fit(X_train, target_train)
 svm_pred = clf.predict(X_pred)
 print('Number of support vectors:', len(clf.support_vectors_))
