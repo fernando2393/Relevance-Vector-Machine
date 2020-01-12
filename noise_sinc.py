@@ -18,7 +18,7 @@ X_test = np.linspace(-10,10, N_test) # Test
 variance = 0.01
 
 # Choose kernel between linear_spline or exponential
-kernel = "gaussian"
+kernel = "linear_spline"
 
 #----- Case 1 -----#
 y_train = np.zeros(N_train)
@@ -55,10 +55,10 @@ if (kernel == "linear_spline"):
     clf = svm.SVR(kernel = svm_methods.linear_spline)
 else:
     clf = svm.SVR(kernel="rbf", gamma = (1/dimensions))
-clf.fit(np.reshape(X_train, (len(X_train), dimensions)), np.reshape(y_train, (len(y_train), dimensions)))
+clf.fit(np.reshape(abs(X_train), (len(X_train), dimensions)), np.reshape(y_train, (len(y_train), dimensions)))
 relevant_vectors = clf.support_
 print("Running SVM testing...")
-svm_pred = clf.predict(np.reshape(X_test, (len(X_test), dimensions)))
+svm_pred = clf.predict(np.reshape(abs(X_test), (len(X_test), dimensions)))
 print('Number of support vectors:', len(clf.support_))
 # Check Performance SVM
 print('RMSE for SVM:', sqrt(mean_squared_error(y, svm_pred)))
@@ -67,4 +67,5 @@ plt.scatter(X_train, y_train, label='Training samples')
 plt.plot(X_test, y, c='black', label='True function')
 plt.scatter(X_train[relevant_vectors[:-1]], y_train[relevant_vectors[:-1]], c='r', marker='*', s=100, label='Relevant vectors')
 plt.legend()
+plt.title('sinc(x) dataset with noise')
 plt.show()
