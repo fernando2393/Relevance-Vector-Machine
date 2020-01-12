@@ -162,7 +162,7 @@ ipython_config.py
 # Markdown Navigator plugin
 
 ### VisualStudioCode ###
-.vscode/*
+.vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
