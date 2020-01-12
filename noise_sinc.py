@@ -33,12 +33,12 @@ for i in range(len(X_train)):
 alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(np.reshape(X_train,(N_train,dimensions)), variance, y_train, kernel, N_train)
 relevant_vectors = alpha[1].astype(int)
 
+print("Running RVM testing...")
 for it in tqdm(range(tests)):
     for i in range(N_test):
         y[i] =  math.sin(X_test[i]) / X_test[i]
     pred_array.append(rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions))
 y_pred = np.array(pred_array).mean(axis=0)
-
 print('RMSE:', sqrt(mean_squared_error(y, y_pred)))
 print('Maximum error between predicted samples and true: ', max(abs(y - y_pred)) ** 2)
 print('Number of relevant vectors:', len(relevant_vectors)-1)
@@ -57,7 +57,12 @@ plt.show()
 # Performance with SVM from sklearn
 clf = svm.SVR(kernel=svm_methods.linear_spline)
 clf.fit(np.reshape(X_train, (len(X_train), 1)), np.reshape(y_train, (len(y_train), 1)))
-svm_pred = clf.predict(np.reshape(X_test, (len(X_test), 1)))
+pred_array = list()
+
+print("Running SVM testing...")
+for it in tqdm(range(tests)):
+    pred_array.append(clf.predict(np.reshape(X_test, (len(X_test), dimensions))))
+svm_pred = np.array(pred_array).mean(axis=0)
 print('Number of support vectors:', len(clf.support_))
 # Check Performance SVM
 print('RMSE for SVM:', sqrt(mean_squared_error(y, svm_pred)))

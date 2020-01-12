@@ -9,9 +9,9 @@ from sklearn import preprocessing
 from sklearn import svm
 import svm_methods
 
-num_iterations = 100
-training_samples = 240
-test_samples = 1000
+tests = 100
+N_train = 240
+N_test = 1000
 dimensions = 4
 variance = 0.01
 pred_array = list()
@@ -20,66 +20,73 @@ pred_array = list()
 kernel = "linear_spline"
 
 # Generation of traning set
-X_training = np.zeros((training_samples, dimensions))
+X_train = np.zeros((N_train, dimensions))
 # Generation of samples
-X_training[:,0] = np.random.uniform(0,100, training_samples)
-X_training[:,1] = np.random.uniform(40 * np.pi, 560 * np.pi, training_samples)
-X_training[:,2] = np.random.uniform(0,1, training_samples)
-X_training[:,3] = np.random.uniform(1,11, training_samples)
+X_train[:,0] = np.random.uniform(0,100, N_train)
+X_train[:,1] = np.random.uniform(40 * np.pi, 560 * np.pi, N_train)
+X_train[:,2] = np.random.uniform(0,1, N_train)
+X_train[:,3] = np.random.uniform(1,11, N_train)
 
 # Generation of training targets
-training_targets = np.zeros(training_samples)
+y_train = np.zeros(N_train)
 
 # Generating target without noise
-training_targets = pow(pow(X_training[:,0], 2) + pow(X_training[:,1] * 
-X_training[:,2] - 1 / (X_training[:,1] * X_training[:,3]), 2), 1/2)
+y_train = pow(pow(X_train[:,0], 2) + pow(X_train[:,1] * 
+X_train[:,2] - 1 / (X_train[:,1] * X_train[:,3]), 2), 1/2)
     
 # Adding noise
-for i in range(training_samples):
-    training_targets[i] += np.random.normal(0, training_targets.std()/3)
+for i in range(N_train):
+    y_train[i] += np.random.normal(0, y_train.std()/3)
 
 # Reshape to create scalar
-training_targets = np.reshape(training_targets, (len(training_targets),1))
+y_train = np.reshape(y_train, (len(y_train),1))
 
 # Scaling the dimensions to make proper comparisons
 MinMaxScaler = preprocessing.MinMaxScaler()
-X_training = MinMaxScaler.fit_transform(X_training)
+X_train = MinMaxScaler.fit_transform(X_train)
 
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_training, variance, training_targets, kernel, X_training.shape[0])
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, X_train.shape[0])
 relevant_vectors = alpha[1].astype(int)
 print("Number of relevant vectors:", len(relevant_vectors)-1)
 
 # Generation of testing
-X_test = np.zeros((test_samples, dimensions))
-y = np.zeros((test_samples, num_iterations))
-for i in tqdm(range(num_iterations)):
-    X_test[:,0] = np.random.uniform(0,100, test_samples)
-    X_test[:,1] = np.random.uniform(40 * np.pi, 560 * np.pi, test_samples)
-    X_test[:,2] = np.random.uniform(0,1, test_samples)
-    X_test[:,3] = np.random.uniform(1,11, test_samples)
+X_test = np.zeros((N_test, dimensions))
+y = np.zeros((N_test, tests))
+
+print("Running RVM testing...")
+for i in tqdm(range(tests)):
+    X_test[:,0] = np.random.uniform(0,100, N_test)
+    X_test[:,1] = np.random.uniform(40 * np.pi, 560 * np.pi, N_test)
+    X_test[:,2] = np.random.uniform(0,1, N_test)
+    X_test[:,3] = np.random.uniform(1,11, N_test)
     y[:,i] = pow(pow(X_test[:,0], 2) + pow(X_test[:,1] * 
     X_test[:,2] - 1 / (X_test[:,1] * X_test[:,3]), 2), 1/2)
     X_test = MinMaxScaler.fit_transform(X_test)
-    pred_array.append(rvm_r.predict(X_training, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions))
+    pred_array.append(rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions))
 
 y = y.mean(axis=1)
 pred_mean = np.array(pred_array).mean(axis=0)
 
 print('RMSE for RVM:', sqrt(mean_squared_error(y, pred_mean)))
-plt.scatter(range(test_samples), y, label='Real')
-plt.scatter(range(test_samples), pred_mean, c='green', label='Predicted RVM')
+plt.scatter(range(N_test), y, label='Real')
+plt.scatter(range(N_test), pred_mean, c='orange', label='Predicted RVM')
 plt.legend()
 plt.show()
 
 # Performance with SVM from sklearn
 
-clf = svm.SVR(kernel=svm_methods.kernel)
-clf.fit(X_training, training_targets)
-svm_predict = clf.predict(X_test)
+clf = svm.SVR(kernel=svm_methods.linear_spline)
+clf.fit(X_train, y_train)
+pred_array = list()
+
+print("Running SVM testing...")
+for it in tqdm(range(tests)):
+    pred_array.append(clf.predict(np.reshape(X_test, (len(X_test), dimensions))))
+svm_pred = np.array(pred_array).mean(axis=0)
 print('Number of support vectors:', len(clf.support_))
 # Check Performance SVM
-print('RMSE for SVM:', sqrt(mean_squared_error(y, svm_predict)))
+print('RMSE for SVM:', sqrt(mean_squared_error(y, svm_pred)))
 plt.scatter(range(len(y)), y, label='Real')
-plt.scatter(range(len(svm_predict)), svm_predict, c='orange', label='Predicted SVM')
+plt.scatter(range(len(svm_pred)), svm_pred, c='orange', label='Predicted SVM')
 plt.legend()
 plt.show()
