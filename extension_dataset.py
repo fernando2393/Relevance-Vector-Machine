@@ -62,8 +62,8 @@ plt.title("Extension data set prediction")
 plt.legend()
 plt.show()
 
-# Performance with SVM from sklearn
-'''clf = svm.SVR(kernel=svm_methods.exponential)
+'''# Performance with SVM from sklearn
+clf = svm.SVR(kernel = svm_methods.exponential)
 clf.fit(np.reshape(X_train, (len(X_train), 1)), np.reshape(y_train, (len(y_train), 1)))
 svm_pred = clf.predict(np.reshape(X_test, (len(X_test), 1)))
 print('Number of support vectors:', len(clf.support_))
