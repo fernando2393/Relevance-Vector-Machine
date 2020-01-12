@@ -14,7 +14,7 @@ N_train = 240
 N_test = 1000
 dimensions = 4
 variance = 0.01
-pred_array = list()
+test_array = list()
 
 # Choose kernel between linear_spline or exponential
 kernel = "linear_spline"
@@ -59,28 +59,24 @@ for i in tqdm(range(tests)):
     X_test[:,1] = np.random.uniform(40 * np.pi, 560 * np.pi, N_test)
     X_test[:,2] = np.random.uniform(0,1, N_test)
     X_test[:,3] = np.random.uniform(1,11, N_test)
-    y[:,i] = pow(np.tan((X_test[:,1] * X_test[:,2] - 1 / (X_test[:,1] * X_test[:,3])
+    test_array.append(X_test)
+X_test = np.array(test_array).mean(axis=0)
+y = pow(np.tan((X_test[:,1] * X_test[:,2] - 1 / (X_test[:,1] * X_test[:,3])
     ) / X_test[:,0]), -1)
-    X_test = MinMaxScaler.fit_transform(X_test)
-    pred_array.append(rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions))
+X_test = MinMaxScaler.fit_transform(X_test)
+y_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions)
 
-y = y.mean(axis=1)
-pred_mean = np.array(pred_array).mean(axis=0)
-
-print('RMSE:', sqrt(mean_squared_error(y, pred_mean)))
-plt.plot(range(N_test), y)
-plt.scatter(range(N_test), pred_mean, c='orange')
+print('RMSE for RVM:', sqrt(mean_squared_error(y, y_pred)))
+plt.scatter(range(N_test), y, label='Real')
+plt.scatter(range(N_test), y_pred, c='orange', label='Predicted RVM')
+plt.legend()
 plt.show()
 
 # Performance with SVM from sklearn
 clf = svm.SVR(kernel=svm_methods.linear_spline)
 clf.fit(X_train, y_train)
-pred_array = list()
-
 print("Running SVM testing...")
-for it in tqdm(range(tests)):
-    pred_array.append(clf.predict(np.reshape(X_test, (len(X_test), dimensions))))
-svm_pred = np.array(pred_array).mean(axis=0)
+svm_pred = clf.predict(np.reshape(X_test, (len(X_test), dimensions)))
 print('Number of support vectors:', len(clf.support_))
 # Check Performance SVM
 print('RMSE for SVM:', sqrt(mean_squared_error(y, svm_pred)))

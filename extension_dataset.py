@@ -8,6 +8,7 @@ from sklearn.metrics import mean_squared_error
 from math import sqrt
 from tqdm import tqdm
 from sklearn.svm import SVR
+from sklearn import svm
 import itertools
 import svm_methods
 
@@ -46,7 +47,7 @@ for i in range(X_test.shape[0]):
 
 y_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions)
 
-print('RMSE:', sqrt(mean_squared_error(y, y_pred)))
+print('RMSE for RVM:', sqrt(mean_squared_error(y, y_pred)))
 print('Maximum error between predicted samples and true: ', max(abs(y-y_pred))**2)
 print('Number of relevant vectors:', len(relevant_vectors)-1)
 
@@ -63,13 +64,20 @@ plt.legend()
 plt.show()
 
 # Performance with SVM from sklearn
-'''clf = svm.SVR(kernel=svm_methods.exponential)
-clf.fit(np.reshape(X_train, (len(X_train), 1)), np.reshape(y_train, (len(y_train), 1)))
-svm_pred = clf.predict(np.reshape(X_test, (len(X_test), 1)))
+clf = svm.SVR(kernel='rbf')
+clf.fit(np.reshape(X_train, (len(X_train), dimensions)), np.reshape(y_train, (len(y_train), 1)))
+svm_pred = clf.predict(np.reshape(X_test, (len(X_test), dimensions)))
 print('Number of support vectors:', len(clf.support_))
 # Check Performance SVM
 print('RMSE for SVM:', sqrt(mean_squared_error(y, svm_pred)))
-plt.scatter(range(len(y)), y, label='Real')
-plt.scatter(range(len(svm_pred)), svm_pred, c='orange', label='Predicted SVM')
+sns.set(style="darkgrid")
+fig = plt.figure()
+fig.set_size_inches(15, 11)
+ax = fig.gca(projection='3d')
+ax.plot_trisurf(X_test[:,0], X_test[:,1], svm_pred, cmap=plt.cm.plasma, linewidth=0.2)
+ax.view_init(30, -50)
+ax.scatter(X_train[:,0], X_train[:,1], y_train, c = "black", label='Training points')
+ax.set_xlabel('x1'); ax.set_ylabel('x2'); ax.set_zlabel('y')
+plt.title("Extension data set prediction")
 plt.legend()
-plt.show()'''
+plt.show()

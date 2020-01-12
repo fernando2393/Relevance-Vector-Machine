@@ -42,11 +42,11 @@ relevant_vectors = alpha[1].astype(int)
 y_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions)
 
 # Check Performance
-print('RMSE:', sqrt(mean_squared_error(y_test, y_pred)))
+print('RMSE for RVM:', sqrt(mean_squared_error(y_test, y_pred)))
 print('Number of relevant vectors:', len(relevant_vectors))
 
 # Performance with SVM from sklearn
-clf = svm.SVR(kernel=svm_methods.kernel)
+clf = svm.SVR(kernel=svm_methods.linear_spline)
 clf.fit(X_train, y_train)
 svm_pred = clf.predict(X_test)
 print('Number of support vectors:', len(clf.support_))
