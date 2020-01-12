@@ -16,11 +16,13 @@ def polynomial_kernel(vector_x, vector_y):
     return np.power(np.dot(vector_x, vector_y) + 1, power)
 
 
-def radial_basis_kernel(X, Y, r=0.5):
-    #X, Y = check_pairwise_arrays(X, Y)
-    distance = euclidean_distances(X, Y, squared=True)
-    kernel = -r**2 * distance
-    return np.exp(kernel)
+def gaussian_kernel(X, Y):
+    r = 1.0 / X.shape[1]
+    K = euclidean_distances(X, Y, squared=True)
+    K *= -(r**2)
+    K=np.exp(K)
+    return K
+
 
 
 # KernelFunction = linear_kernel

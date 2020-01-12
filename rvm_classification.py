@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from scipy.special import expit
 from tqdm import tqdm as tqdm
 from sklearn.metrics.pairwise import rbf_kernel
 
@@ -18,7 +17,7 @@ class RVM_Classifier:
 
     def __init__(self):
 
-        self.threshold_alpha = 1e9
+        self.threshold_alpha = 1e12
 
         # If the bias is pruned we set this to True
         self.removed_bias = False
@@ -125,8 +124,8 @@ class RVM_Classifier:
 
     # From under formula 4
     def phi_function(self, x, y, thing=False):
-        #phi_kernel = Kernel.radial_basis_kernel(x, y, 0.5)
-        phi_kernel = rbf_kernel(x,y)
+        phi_kernel = Kernel.gaussian_kernel(x, y)
+        #phi_kernel = rbf_kernel(x,y)
         if self.removed_bias:
         # if thing:
             return phi_kernel
