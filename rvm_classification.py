@@ -54,6 +54,13 @@ class RVM_Classifier:
             data = data_test.values
             self.test_data = data[:, :-1]
             self.test_labels = data[:, -1]
+        elif data_set == "usps":
+            raise NameError("This data set is not yet supported")
+        elif data_set == "ripley":
+            self.training_data = np.loadtxt("datasets/ripley/ripley_train_data.asc")
+            self.training_labels = np.loadtxt("datasets/ripley/ripley_train_labels.asc")
+            self.test_data = np.loadtxt("datasets/ripley/ripley_test_data.asc")
+            self.test_labels = np.loadtxt("datasets/ripley/ripley_test_data.asc")
         else:
             self.training_data = np.loadtxt(
                 "datasets/{data_set}/{data_set}_train_data_{index}.asc".format(data_set=data_set, index=data_set_index))
@@ -94,6 +101,9 @@ class RVM_Classifier:
         random_target = np.array(random_target)
         return random_data, random_target
 
+    def get_nr_relevance_vectors(self):
+        return self.relevance_vector.shape[0]
+
     # From formula 16
     def recalculate_alphas_function(self, gamma, weights):
         return gamma / (weights ** 2)
@@ -114,12 +124,12 @@ class RVM_Classifier:
             beta_matrix[n][n] = y[n] * (1 - y[n])
         return beta_matrix
 
-    def phi_function(self, x, y, add=False):
-        if add:
-            phi_kernel = Kernel.radial_basis_kernel(x, y, 0.5)
-            phi0 = np.ones((phi_kernel.shape[0], 1))
-            return np.hstack((phi0, phi_kernel))
-        return Kernel.radial_basis_kernel(x, y, 0.5)
+    def phi_function(self, x, y):
+        if self.removed_bias:
+            return Kernel.radial_basis_kernel(x, y, 0.5)
+        phi_kernel = Kernel.radial_basis_kernel(x, y, 0.5)
+        phi0 = np.ones((phi_kernel.shape[0], 1))
+        return np.hstack((phi0, phi_kernel))
 
     # Formula 2
     def y_function(self, weight, phi):
@@ -193,13 +203,13 @@ class RVM_Classifier:
             Train the classifier
         """
         self.relevance_vector = self.training_data
-        self.phi = self.phi_function(self.training_data, self.training_data, True)
+        self.phi = self.phi_function(self.training_data, self.training_data)
 
         # Initialize uniformly
         self.alphas = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
         self.weight = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
 
-        max_training_iterations = 1000
+        max_training_iterations = 3000
         threshold = 1e-3
         for i in tqdm(range(max_training_iterations)):
             self.alphas_old = np.copy(self.alphas)
@@ -228,7 +238,7 @@ class RVM_Classifier:
             else:
                 data = self.test_data
 
-        phi = self.phi_function(data, self.relevance_vector, True)
+        phi = self.phi_function(data, self.relevance_vector)
         y = self.y_function(self.weight, phi)
         pred = np.where(y > 0.5, 1, 0)
         self.prediction = pred
