@@ -38,14 +38,14 @@ X_test = np.zeros(((N_test)**2, 2))
 for i, x in enumerate(itertools.product(X_1_test, X_2_test)):
     X_test[i, :] = x
 
-alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, X_train.shape[0], dimensions)
+alpha, variance_mp, mu_mp, sigma_mp = rvm_r.fit(X_train, variance, y_train, kernel, X_train.shape[0], dimensions, N_test)
 relevant_vectors = alpha[1].astype(int)
 
 y = np.zeros(X_test.shape[0])
 for i in range(X_test.shape[0]):
     y[i] = math.sin(X_test[i, 0]) / X_test[i, 0] + 0.1 * X_test[i, 1]
 
-y_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions)
+y_pred = rvm_r.predict(X_train, X_test, relevant_vectors, variance_mp, mu_mp, sigma_mp, kernel, dimensions, N_test)
 
 print('RMSE for RVM:', sqrt(mean_squared_error(y, y_pred)))
 print('Maximum error between predicted samples and true: ', max(abs(y-y_pred))**2)
