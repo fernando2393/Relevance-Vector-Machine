@@ -87,7 +87,7 @@ class RVM_Classifier:
                                                                               nr_samples)
             self.test_data = random_test_data
             self.test_labels = random_test_target
-    
+
     def multi_class_transformation(self, labels):
         labels = pd.get_dummies(labels).values
         return labels
@@ -128,7 +128,7 @@ class RVM_Classifier:
        for me it makes sense to use 1e-3 because we do not want value that big that might interfere in the sigma computation, and to small is shit.
        another option is to reduce the threshold and use 1e11 instead of 1e12or even 1e9"""
         hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
-        return np.linalg.inv(hessian)# + np.eye(len(alpha))*1e-3)
+        return np.linalg.inv(hessian)  # + np.eye(len(alpha))*1e-3)
 
     # From under formula 25
     def beta_matrix_function(self, y):
@@ -157,15 +157,13 @@ class RVM_Classifier:
     def log_posterior_function(self, weight, alpha, phi, target):
         log_posterior = 0
         jacobian = []
+        y = self.y_function(weight, phi)
         for k in range(self.n_classes):
-            y = self.y_function(weight, phi)
-            log_likehood_term = np.sum(target[:,k] * np.log(y))
-            prior_term = np.dot(np.dot(weight.T, np.diag(alpha)), weight)
-            log_posterior += log_likehood_term - prior_term / 2
-            likelihood_jacobian = np.dot(phi.T, (target[:,k] - np.dot(target[:,k], y))) 
-            prior_jacobian = np.dot(np.diag(alpha), weight)
-            jacobian.append(prior_jacobian - likelihood_jacobian)
-        jacobian = np.sum(jacobian, axis =0)
+            y_1 = y[target[:,k] == 1]
+            sum_y = np.sum(np.log(y_1))
+            log_posterior += sum_y - (np.linalg.multi_dot([weight.T, np.diag(alpha), weight]) / 2)
+            jacobian.append(np.dot(np.diag(alpha), weight) - np.dot(phi.T, (target[:,k] - sum_y)))
+        jacobian = np.sum(jacobian, axis=0)
         return -log_posterior, jacobian
 
     def hessian(self, weights, alphas, phi, target):
@@ -173,7 +171,7 @@ class RVM_Classifier:
         beta = self.beta_matrix_function(y)
         hessian = np.zeros((np.diag(alphas).shape[0], np.diag(alphas).shape[0]))
         for k in range(self.n_classes):
-            hessian += np.diag(alphas) + np.linalg.multi_dot([phi.T, target[:k*beta, phi])
+            hessian += np.diag(alphas) + np.linalg.multi_dot([phi.T, beta, phi])
         return hessian
 
     def update_weights(self):
@@ -185,11 +183,11 @@ class RVM_Classifier:
             method='Newton-CG',
             jac=True,
             options={
-                'maxiter': 75
+                'maxiter': 50
             }
         )
         self.weight = result.x  # Updates the weights to the maximized (log is negative that is why we minimize)
-
+        ok = 3
     def get_pruning_info(self):
         alphas_checked = (self.alphas < self.threshold_alpha).tolist()
         nr_to_prune = alphas_checked.count(False)
@@ -223,7 +221,6 @@ class RVM_Classifier:
             self.removed_bias = True
             print("Bias removed")
 
-
     def fit(self):
         """
             Train the classifier
@@ -250,7 +247,7 @@ class RVM_Classifier:
             self.alphas = self.recalculate_alphas_function(gammas, self.weight)
 
             # self.prune()
-            self.prune()  # The time og John is here
+            self.prune()
 
             difference = np.amax(np.abs(self.alphas - self.alphas_old))  # Need to change this
             if difference < threshold:
