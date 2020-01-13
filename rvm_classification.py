@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from sklearn.metrics.pairwise import rbf_kernel
-from tqdm import tqdm as tqdm
+from tqdm import tqdm
+
 import Kernel
 
 
@@ -114,16 +114,16 @@ class RVM_Classifier:
 
     # Formula 26. With alpha from below 13
     def sigma_function(self, phi, beta, alpha):
-        hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
-        return np.linalg.inv(hessian)#+np.eye(len(alpha))*1e-1)
         """for banana data 1 using:
-            1e-4 gets over 300 relevance vector,   
-            1e-3 we get 13 
-            1e-2 we get 9 
-            1e-1 we get 244
-            This values might change for each data set, do not know what to do :(
-        for me it makes sense to use 1e-3 because we do not want value that big that might interfere in the sigma computation, and to small is shit.
-        another option is to reduce the threshold and use 1e11 instead of 1e12or even 1e9"""
+           1e-4 gets over 300 relevance vector,
+           1e-3 we get 13
+           1e-2 we get 9
+           1e-1 we get 244
+           This values might change for each data set, do not know what to do :(
+       for me it makes sense to use 1e-3 because we do not want value that big that might interfere in the sigma computation, and to small is shit.
+       another option is to reduce the threshold and use 1e11 instead of 1e12or even 1e9"""
+        hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
+        return np.linalg.inv(hessian)  # +np.eye(len(alpha))*1e-1)
 
     # From under formula 25
     def beta_matrix_function(self, y):
@@ -182,51 +182,6 @@ class RVM_Classifier:
         )
         self.weight = result.x  # Updates the weights to the maximized (log is negative that is why we minimize)
 
-    def prune2(self):
-        index = []
-
-        prune_alpha = np.vstack((self.alphas, range(len(self.alphas))))
-        prune_alpha_old = np.vstack((self.alphas_old, range(len(self.alphas_old))))
-        for i in range(len(prune_alpha[0])):
-            if (i != 0 and prune_alpha[0][i] > self.threshold_alpha):
-                index.append(i)
-
-        self.phi = np.delete(self.phi, index, 1)
-        self.weight = np.delete(self.weight, index)
-        self.alphas = np.delete(prune_alpha, index, 1)[0, :]
-        self.alphas_old = np.delete(prune_alpha_old, index, 1)[0, :]
-
-        # if not self.removed_bias:
-        #     self.relevance_vector = self.relevance_vector[index[1:]]
-        # else:
-        #     self.relevance_vector = self.relevance_vector[index]
-        self.relevance_vector = np.delete(self.relevance_vector, index, 0)
-        ok = 1
-        # if not index[0] == [] and not self.removed_bias:
-        #     self.removed_bias = True
-        # print("Bias removed")
-
-    # This function needs to be changed
-    def prune(self):
-        """
-            Pruning based on alpha values.
-        """
-        mask = self.alphas < self.threshold_alpha
-
-        self.alphas = self.alphas[mask]
-        self.alphas_old = self.alphas_old[mask]
-        self.phi = self.phi[:, mask]
-        self.weight = self.weight[mask]
-
-        if not self.removed_bias:
-            self.relevance_vector = self.relevance_vector[mask[1:]]
-        else:
-            self.relevance_vector = self.relevance_vector[mask]
-
-        if not mask[0] and not self.removed_bias:
-            self.removed_bias = True
-            print("Bias removed")
-
     def get_pruning_info(self):
         alphas_checked = (self.alphas < self.threshold_alpha).tolist()
         nr_to_prune = alphas_checked.count(False)
@@ -237,30 +192,25 @@ class RVM_Classifier:
             pos = alphas_checked.index(False, index_pos)
             indexes.append(pos)
             index_pos = pos + 1
-            # if not self.removed_bias and pos==0:
-            #     Todo finish the last thing
 
-        bias_removed = False
-        if not alphas_checked[0]:
-            bias_removed = True
-        return indexes, bias_removed, alphas_checked
+        if not alphas_checked[0] and not self.removed_bias:
+            self.removed_bias = True
+            # print("Removed Bias")
 
-    def prune_john_madafackaa(self):
-        indexes, bias_removed, alphas_checked = self.get_pruning_info()
+        return indexes, alphas_checked
+
+    def prune(self):
+        indexes, alphas_checked = self.get_pruning_info()
         self.alphas = np.delete(self.alphas, indexes)
         self.alphas_old = np.delete(self.alphas_old, indexes)
         self.phi = np.delete(self.phi, indexes, 1)
         self.weight = np.delete(self.weight, indexes)
 
         if not self.removed_bias:
-            a = [x - 1 for x in indexes]
-            self.relevance_vector = np.delete(self.relevance_vector, a, 0)
+            bias_check = [x - 1 for x in indexes]  # Produces annoying warning
+            self.relevance_vector = np.delete(self.relevance_vector, bias_check, 0)
         else:
             self.relevance_vector = np.delete(self.relevance_vector, indexes, 0)
-
-        if bias_removed and not self.removed_bias:
-            self.removed_bias = True
-            print("Bias removed")
 
     def fit(self):
         """
@@ -287,21 +237,21 @@ class RVM_Classifier:
             self.alphas = self.recalculate_alphas_function(gammas, self.weight)
 
             # self.prune()
-            self.prune_john_madafackaa()  # The time og John is here
+            self.prune()  # The time og John is here
 
             difference = np.amax(np.abs(self.alphas - self.alphas_old))  # Need to change this
             if difference < threshold:
                 print("Training done, it converged. Nr iterations: " + str(i + 1))
                 break
 
-    def predict(self, data=[], use_predifined_training=False):
+    def predict(self, data=[], use_predefined_training=False):
         if data == []:
-            if use_predifined_training:
+            if use_predefined_training:
                 data = self.training_data
             else:
                 data = self.test_data
 
-        phi = self.phi_function(data, self.relevance_vector, True)
+        phi = self.phi_function(data, self.relevance_vector)
         y = self.y_function(self.weight, phi)
         pred = np.where(y > 0.5, 1, 0)
         self.prediction = pred
@@ -330,7 +280,7 @@ class RVM_Classifier:
 
         # Plot the decision boundary. For that, we will assign a color to each
         # point in the mesh [x_min, m_max]x[y_min, y_max].
-        print("Calculating the prediction, this might take a while...")
+        print("Calculating the prediction and will plot, this might take a while...")
         data_mesh = np.c_[xx.ravel(), yy.ravel()]
         Z = self.predict(data_mesh)
 
