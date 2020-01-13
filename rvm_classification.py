@@ -16,7 +16,7 @@ class RVM_Classifier:
 
     def __init__(self):
 
-        self.threshold_alpha = 1e12
+        self.threshold_alpha = 1e9
 
         # If the bias is pruned we set this to True
         self.removed_bias = False
@@ -123,7 +123,7 @@ class RVM_Classifier:
        for me it makes sense to use 1e-3 because we do not want value that big that might interfere in the sigma computation, and to small is shit.
        another option is to reduce the threshold and use 1e11 instead of 1e12or even 1e9"""
         hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
-        return np.linalg.inv(hessian)# + np.eye(len(alpha))*1e-3)
+        return np.linalg.inv(hessian)# +np.eye(len(alpha))*1e-9)
 
     # From under formula 25
     def beta_matrix_function(self, y):

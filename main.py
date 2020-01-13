@@ -5,6 +5,7 @@ errors = []
 nr_iterations = 10
 data_set = "banana"
 for i in range(nr_iterations):
+    print("data_set {n}".format(n=i))
     rvc = rvm_classification.RVM_Classifier()
     rvc.set_predefined_training_data(data_set, data_set_index=i + 1)
     rvc.fit()
