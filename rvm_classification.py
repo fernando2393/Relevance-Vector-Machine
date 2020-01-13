@@ -141,8 +141,8 @@ class RVM_Classifier:
         """ there is a difference when estimating for the ripleys and the other data sets. 
         For kernel, in the paper, it is said that we should use r^2, where r=0.5. However, another interpretation is that r^2 = 0.5, in this case, our input must be sqrt(0.5).
         Seems a little bit off for me :("""
-        if self.removed_bias[k]:
-            return phi_kernel
+        # if self.removed_bias[k]:
+        #     return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))
         return np.hstack((phi0, phi_kernel))
 
@@ -162,7 +162,8 @@ class RVM_Classifier:
         prior_term = np.dot(np.dot(weight.T, np.diag(alpha)), weight)
         log_posterior = likelihood_term - (prior_term / 2)
         prior_jacobian =np.dot(np.diag(alpha), weight)
-        likelihood_jacobian = np.dot(phi.T, (target_labels - np.dot(target_labels, y)))
+        likelihood_jacobian = np.dot(phi.T, (target_labels - y))
+
         jacobian = prior_jacobian - likelihood_jacobian
 
         return -log_posterior, jacobian
@@ -170,7 +171,7 @@ class RVM_Classifier:
     def hessian(self, weights, alphas, phi, target_labels):
         y = self.y_function(weights, phi)
         beta = self.beta_matrix_function(y)
-        hessian_likelihood = np.dot(phi.T, np.dot(target_labels, np.dot(beta, phi))))
+        hessian_likelihood = np.dot(phi.T, np.dot(beta, phi))
         return np.diag(alphas) + hessian_likelihood
 
     def update_weights(self, k):
