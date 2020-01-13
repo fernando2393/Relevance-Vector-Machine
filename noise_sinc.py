@@ -13,16 +13,14 @@ N_train = 100
 N_test = 1000
 tests = 100
 dimensions = 1
-X_train = np.linspace(-10,10,N_train) # Training
-X_test = np.linspace(-10,10, N_test) # Test
 variance = 0.01
 
 # Choose kernel between linear_spline or exponential
 kernel = "linear_spline"
 
-#----- Case 1 -----#
+X_train = np.linspace(-10,10,N_train) # Training
+X_test = np.linspace(-10,10, N_test) # Test
 y_train = np.zeros(N_train)
-y_test = np.zeros(N_test)
 y = np.zeros(N_test)
 
 for i in range(len(X_train)):
@@ -45,7 +43,7 @@ plt.scatter(X_train[relevant_vectors[:-1]], y_train[relevant_vectors[:-1]], c='r
 plt.xlabel('X')
 plt.ylabel('Target')
 plt.legend()
-plt.title('sinc(x) dataset with noise')
+plt.title('sinc(x) dataset with noise RVM')
 plt.show()
 
 ############## Comparisson with SVM from Scikit-Learn ##############
@@ -67,5 +65,5 @@ plt.scatter(X_train, y_train, label='Training samples')
 plt.plot(X_test, y, c='black', label='True function')
 plt.scatter(X_train[relevant_vectors[:-1]], y_train[relevant_vectors[:-1]], c='r', marker='*', s=100, label='Relevant vectors')
 plt.legend()
-plt.title('sinc(x) dataset with noise')
+plt.title('sinc(x) dataset with noise SVM')
 plt.show()
