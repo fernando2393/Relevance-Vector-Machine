@@ -1,13 +1,10 @@
 import random
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from tqdm import tqdm
-
 import Kernel
-
 
 class RVM_Classifier:
     """
@@ -32,6 +29,7 @@ class RVM_Classifier:
         self.training_labels = None
         self.test_data = None
         self.test_labels = None
+        self.n_classes = None
 
         # The prediction is stored here
         self.prediction = None
@@ -86,6 +84,10 @@ class RVM_Classifier:
                                                                               nr_samples)
             self.test_data = random_test_data
             self.test_labels = random_test_target
+    
+    def multi_class_transformation(self, labels):
+        labels = pd.get_dummies(labels).values
+        return labels
 
     def get_nr_random_samples(self, data, target, nr_samples):
         total_nr_samples = data.shape[0]
@@ -110,7 +112,7 @@ class RVM_Classifier:
 
     # From formula after 16 before 18 (17)
     def gamma_function(self, alpha, sigma):
-        return 1 - alpha * np.diag(sigma)
+        return 1 - np.dot(alpha, np.diag(sigma))
 
     # Formula 26. With alpha from below 13
     def sigma_function(self, phi, beta, alpha):
@@ -130,12 +132,12 @@ class RVM_Classifier:
         return np.diag(y * (1 - y))
 
     # From under formula 4
-    def phi_function(self, x, y):
+    def phi_function(self, x, y, k):
         phi_kernel = Kernel.gaussian_kernel(x, y, r=np.sqrt(0.5))
         """ there is a difference when estimating for the ripleys and the other data sets. 
         For kernel, in the paper, it is said that we should use r^2, where r=0.5. However, another interpretation is that r^2 = 0.5, in this case, our input must be sqrt(0.5).
         Seems a little bit off for me :("""
-        if self.removed_bias:
+        if self.removed_bias[k]:
             return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))
         return np.hstack((phi0, phi_kernel))
@@ -157,8 +159,9 @@ class RVM_Classifier:
         sum_y[1] = np.sum(np.log(y_1))
         y_0 = y[target == 0]
         sum_y[0] = np.sum(np.log(1 - y_0))
-
-        log_posterior = sum_y[1] + sum_y[0] - (np.linalg.multi_dot([weight.T, np.diag(alpha), weight]) / 2)
+        term_aux = np.dot(weight.T, np.diag(alpha))
+        term = np.dot(term_aux, weight) / 2
+        log_posterior = sum_y[1] + sum_y[0] - term
         jacobian = np.dot(np.diag(alpha), weight) - np.dot(phi.T, (target - y))
 
         return -log_posterior, jacobian
@@ -168,22 +171,22 @@ class RVM_Classifier:
         beta = self.beta_matrix_function(y)
         return np.diag(alphas) + np.linalg.multi_dot([phi.T, beta, phi])
 
-    def update_weights(self):
+    def update_weights(self, k):
         result = minimize(
             fun=self.log_posterior_function,
             hess=self.hessian,
-            x0=self.weight,
-            args=(self.alphas, self.phi, self.training_labels),
+            x0=self.weight[k],
+            args=(self.alphas[k], self.phi[k], self.training_labels[:,k]),
             method='Newton-CG',
             jac=True,
             options={
                 'maxiter': 75
             }
         )
-        self.weight = result.x  # Updates the weights to the maximized (log is negative that is why we minimize)
+        self.weight[k] = result.x  # Updates the weights to the maximized (log is negative that is why we minimize)
 
-    def get_pruning_info(self):
-        alphas_checked = (self.alphas < self.threshold_alpha).tolist()
+    def get_pruning_info(self, k):
+        alphas_checked = (self.alphas[k] < self.threshold_alpha).tolist()
         nr_to_prune = alphas_checked.count(False)
 
         index_pos = 0
@@ -193,56 +196,70 @@ class RVM_Classifier:
             indexes.append(pos)
             index_pos = pos + 1
 
-        if not alphas_checked[0] and not self.removed_bias:
-            self.removed_bias = True
+        if not alphas_checked[0] and not self.removed_bias[k]:
+            self.removed_bias[k] = True
             # print("Removed Bias")
 
         return indexes, alphas_checked
 
-    def prune(self):
-        indexes, alphas_checked = self.get_pruning_info()
-        self.alphas = np.delete(self.alphas, indexes)
-        self.alphas_old = np.delete(self.alphas_old, indexes)
-        self.phi = np.delete(self.phi, indexes, 1)
-        self.weight = np.delete(self.weight, indexes)
+    def prune(self, k):
+        indexes, alphas_checked = self.get_pruning_info(k)
+        self.alphas[k] = np.delete(self.alphas[k], indexes, 0)
+        self.alphas_old[k] = np.delete(self.alphas_old[k], indexes, 0)
+        self.phi[k] = np.delete(self.phi[k], indexes, 1)
+        self.weight[k] = np.delete(self.weight[k], indexes, 0)
 
-        if not self.removed_bias:
+        if not self.removed_bias[k]:
             bias_check = [x - 1 for x in indexes]  # Produces annoying warning
-            self.relevance_vector = np.delete(self.relevance_vector, bias_check, 0)
+            self.relevance_vector[k] = np.delete(self.relevance_vector[k], bias_check, 0)
         else:
-            self.relevance_vector = np.delete(self.relevance_vector, indexes, 0)
+            self.relevance_vector[k] = np.delete(self.relevance_vector[k], indexes, 0)
 
     def fit(self):
         """
             Train the classifier
         """
+        # Set the shape of all the variables
+        self.training_labels = self.multi_class_transformation(self.training_labels)
+        self.n_classes = self.training_labels.shape[1]
+        self.relevance_vector = np.full(self.n_classes, None)
+        self.removed_bias = np.full(self.n_classes, False)
+        self.phi = np.full(self.n_classes, None)
+        self.alphas = np.full(self.n_classes, None)
+        self.weight = np.full(self.n_classes, None)
+        
+        for k in range(self.n_classes):
+            self.relevance_vector[k] = self.training_data
+            self.phi[k] = self.phi_function(self.training_data, self.training_data, k)
+            self.alphas[k] = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
+            self.weight[k] = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
 
-        self.relevance_vector = self.training_data
-        self.phi = self.phi_function(self.training_data, self.training_data)
-
-        self.alphas = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
-        self.weight = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
-
+        self.alphas_old = np.copy(self.alphas)
         max_training_iterations = 1000
         threshold = 1e-3
+        convergence_criteria = [False]*self.n_classes
         for i in tqdm(range(max_training_iterations)):
-            self.alphas_old = np.copy(self.alphas)
-
-            self.update_weights()
-            y = self.y_function(self.weight, self.phi)
-            beta = self.beta_matrix_function(y)
-            sigma = self.sigma_function(self.phi, beta, self.alphas)
-
-            gammas = self.gamma_function(self.alphas, sigma)
-            self.alphas = self.recalculate_alphas_function(gammas, self.weight)
-
-            # self.prune()
-            self.prune()  # The time og John is here
-
-            difference = np.amax(np.abs(self.alphas - self.alphas_old))  # Need to change this
-            if difference < threshold:
+            if not False in convergence_criteria:       # If no False in list then all k has converged
                 print("Training done, it converged. Nr iterations: " + str(i + 1))
                 break
+            for k in range(self.n_classes):
+                if (convergence_criteria[k] == True):
+                    continue
+                self.update_weights(k)
+                y = self.y_function(self.weight[k], self.phi[k])
+                beta = self.beta_matrix_function(y)
+                sigma = self.sigma_function(self.phi[k], beta, self.alphas[k])
+
+                gammas = self.gamma_function(self.alphas[k], sigma[k])
+                self.alphas[k] = self.recalculate_alphas_function(gammas, self.weight[k])
+
+                self.prune(k)
+
+                difference = np.amax(np.abs(self.alphas[k] - self.alphas_old[k]))  # Need to change this
+                if difference < threshold:
+                    print("k: " + str(k) + " converged. Nr iterations: " + str(i + 1))
+                    convergence_criteria[k] = True
+                self.alphas_old[k] = self.alphas[k]
 
     def predict(self, data=[], use_predefined_training=False):
         if data == []:
