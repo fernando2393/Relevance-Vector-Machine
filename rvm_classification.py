@@ -13,7 +13,7 @@ class RVM_Classifier:
 
     def __init__(self):
 
-        self.threshold_alpha = 1e12
+        self.threshold_alpha = 1e11
 
         # If the bias is pruned we set this to True
         self.removed_bias = False
@@ -151,25 +151,23 @@ class RVM_Classifier:
         return y
 
     # Formula 24
-    def log_posterior_function(self, weight, alpha, phi, target):
+    def log_posterior_function(self, weight, alpha, phi, target_labels):
         y = self.y_function(weight, phi)
 
-        sum_y = np.zeros(2)
-        y_1 = y[target == 1]
-        sum_y[1] = np.sum(np.log(y_1))
-        y_0 = y[target == 0]
-        sum_y[0] = np.sum(np.log(1 - y_0))
-        term_aux = np.dot(weight.T, np.diag(alpha))
-        term = np.dot(term_aux, weight) / 2
-        log_posterior = sum_y[1] + sum_y[0] - term
-        jacobian = np.dot(np.diag(alpha), weight) - np.dot(phi.T, (target - y))
+        likelihood_term = np.sum(target_labels * np.log(y))
+        prior_term = np.dot(np.dot(weight.T, np.diag(alpha)), weight)
+        log_posterior = likelihood_term - (prior_term / 2)
+        prior_jacobian =np.dot(np.diag(alpha), weight)
+        likelihood_jacobian = np.dot(phi.T, (target_labels - np.dot(target_labels, y)))
+        jacobian = prior_jacobian - likelihood_jacobian
 
         return -log_posterior, jacobian
 
-    def hessian(self, weights, alphas, phi, target):
+    def hessian(self, weights, alphas, phi, target_labels):
         y = self.y_function(weights, phi)
         beta = self.beta_matrix_function(y)
-        return np.diag(alphas) + np.linalg.multi_dot([phi.T, beta, phi])
+        hessian_likelihood = np.dot(phi.T, np.dot(target_labels, np.dot(beta, phi))))
+        return np.diag(alphas) + hessian_likelihood
 
     def update_weights(self, k):
         result = minimize(
