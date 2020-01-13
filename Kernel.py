@@ -16,11 +16,11 @@ def polynomial_kernel(vector_x, vector_y):
     return np.power(np.dot(vector_x, vector_y) + 1, power)
 
 
-def gaussian_kernel(X, Y):
-    r = 1.0 / X.shape[1]
-    K = euclidean_distances(X, Y, squared=True)
-    K *= -(r**2)
-    K=np.exp(K)
+def gaussian_kernel(X, Y, r=None):
+    if r is None:
+        r = X.shape[1]
+    K = euclidean_distances(X, Y, squared=True)*-(r**-2)
+    np.exp(K,K)
     return K
 
 

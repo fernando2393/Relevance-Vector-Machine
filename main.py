@@ -27,17 +27,17 @@ rvc = rvm_classification.RVM_Classifier()
 
 relevance_vectors = []
 errors = []
-nr_iterations = 10
-data_set = "banana"
+nr_iterations = 1
+data_set = "ripley"
 for i in range(nr_iterations):
     rvc = rvm_classification.RVM_Classifier()
     # print("Running training on data set: " + data_set + " index: " + str(i+1))
-    rvc.set_predefined_training_data(data_set, data_set_index=i+1)
+    rvc.set_predefined_training_data(data_set, data_set_index=i+1, nr_samples=100)
     rvc.fit()
     prediction = rvc.predict(use_predifined_training=False)
     errors.append(rvc.get_prediction_error_rate(use_predefined_training=False))
     relevance_vectors.append(rvc.get_nr_relevance_vectors())
-    #rvc.plot()
+    rvc.plot()
 
 
 print("Result for data set: " + data_set + " for the " + str(nr_iterations) + " indexes")

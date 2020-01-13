@@ -115,8 +115,16 @@ class RVM_Classifier:
 
     # Formula 26. With alpha from below 13
     def sigma_function(self, phi, beta, alpha):
-        b = np.linalg.multi_dot([phi.T, beta, phi])
-        return np.linalg.inv(b + np.diag(alpha))
+        hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)    
+        return np.linalg.inv(hessian)#+np.eye(len(alpha))*1e-1)
+        """for banana data 1 using:
+            1e-4 gets over 300 relevance vector,   
+            1e-3 we get 13 
+            1e-2 we get 9 
+            1e-1 we get 244
+            This values might change for each data set, do not know what to do :(
+        for me it makes sense to use 1e-3 because we do not want value that big that might interfere in the sigma computation, and to small is shit.
+        another option is to reduce the threshold and use 1e11 instead of 1e12or even 1e9"""
 
     # From under formula 25
     def beta_matrix_function(self, y):
@@ -124,8 +132,10 @@ class RVM_Classifier:
 
     # From under formula 4
     def phi_function(self, x, y, thing=False):
-        phi_kernel = Kernel.gaussian_kernel(x, y)
-        #phi_kernel = rbf_kernel(x,y)
+        phi_kernel = Kernel.gaussian_kernel(x, y, r=np.sqrt(0.5)) 
+        """ there is a difference when estimating for the ripleys and the other data sets. 
+        For kernel, in the paper, it is said that we should use r^2, where r=0.5. However, another interpretation is that r^2 = 0.5, in this case, our input must be sqrt(0.5).
+        Seems a little bit off for me :("""
         if self.removed_bias:
         # if thing:
             return phi_kernel
