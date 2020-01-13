@@ -2,8 +2,8 @@ import rvm_classification
 
 relevance_vectors = []
 errors = []
-nr_iterations = 10
-data_set = "banana"
+nr_iterations = 1
+data_set = "image"
 for i in range(nr_iterations):
     print("data_set {n}".format(n=i))
     rvc = rvm_classification.RVM_Classifier()

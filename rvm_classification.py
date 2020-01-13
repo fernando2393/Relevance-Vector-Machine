@@ -16,7 +16,11 @@ class RVM_Classifier:
 
     def __init__(self):
 
+<<<<<<< HEAD
         self.threshold_alpha = 1e9
+=======
+        self.threshold_alpha = 1e11
+>>>>>>> fba30974cc1a90468812ea0ef6b2cc0df14d4875
 
         # If the bias is pruned we set this to True
         self.removed_bias = False
