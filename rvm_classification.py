@@ -123,7 +123,7 @@ class RVM_Classifier:
        for me it makes sense to use 1e-3 because we do not want value that big that might interfere in the sigma computation, and to small is shit.
        another option is to reduce the threshold and use 1e11 instead of 1e12or even 1e9"""
         hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
-        return np.linalg.inv(hessian)  # +np.eye(len(alpha))*1e-1)
+        return np.linalg.inv(hessian)# + np.eye(len(alpha))*1e-3)
 
     # From under formula 25
     def beta_matrix_function(self, y):
@@ -131,7 +131,7 @@ class RVM_Classifier:
 
     # From under formula 4
     def phi_function(self, x, y):
-        phi_kernel = Kernel.gaussian_kernel(x, y, r=np.sqrt(0.5))
+        phi_kernel = Kernel.gaussian_kernel(x, y, r=None)
         """ there is a difference when estimating for the ripleys and the other data sets. 
         For kernel, in the paper, it is said that we should use r^2, where r=0.5. However, another interpretation is that r^2 = 0.5, in this case, our input must be sqrt(0.5).
         Seems a little bit off for me :("""
@@ -193,24 +193,28 @@ class RVM_Classifier:
             indexes.append(pos)
             index_pos = pos + 1
 
-        if not alphas_checked[0] and not self.removed_bias:
-            self.removed_bias = True
-            # print("Removed Bias")
-
-        return indexes, alphas_checked
+        bias_removed = False
+        if not alphas_checked[0]:
+            bias_removed = True
+        return indexes, bias_removed, alphas_checked
 
     def prune(self):
-        indexes, alphas_checked = self.get_pruning_info()
+        indexes, bias_removed, alphas_checked = self.get_pruning_info()
         self.alphas = np.delete(self.alphas, indexes)
         self.alphas_old = np.delete(self.alphas_old, indexes)
         self.phi = np.delete(self.phi, indexes, 1)
         self.weight = np.delete(self.weight, indexes)
 
         if not self.removed_bias:
-            bias_check = [x - 1 for x in indexes]  # Produces annoying warning
+            bias_check = (np.array(indexes) - 1).tolist()  # Produces annoying warning
             self.relevance_vector = np.delete(self.relevance_vector, bias_check, 0)
         else:
             self.relevance_vector = np.delete(self.relevance_vector, indexes, 0)
+
+        if bias_removed and not self.removed_bias:
+            self.removed_bias = True
+            print("Bias removed")
+
 
     def fit(self):
         """
