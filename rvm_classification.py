@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from tqdm import tqdm as tqdm
 from sklearn.metrics.pairwise import rbf_kernel
-
+from tqdm import tqdm as tqdm
 import Kernel
 
 
@@ -115,7 +114,7 @@ class RVM_Classifier:
 
     # Formula 26. With alpha from below 13
     def sigma_function(self, phi, beta, alpha):
-        hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)    
+        hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
         return np.linalg.inv(hessian)#+np.eye(len(alpha))*1e-1)
         """for banana data 1 using:
             1e-4 gets over 300 relevance vector,   
@@ -131,23 +130,22 @@ class RVM_Classifier:
         return np.diag(y * (1 - y))
 
     # From under formula 4
-    def phi_function(self, x, y, thing=False):
-        phi_kernel = Kernel.gaussian_kernel(x, y, r=np.sqrt(0.5)) 
+    def phi_function(self, x, y):
+        phi_kernel = Kernel.gaussian_kernel(x, y, r=np.sqrt(0.5))
         """ there is a difference when estimating for the ripleys and the other data sets. 
         For kernel, in the paper, it is said that we should use r^2, where r=0.5. However, another interpretation is that r^2 = 0.5, in this case, our input must be sqrt(0.5).
         Seems a little bit off for me :("""
         if self.removed_bias:
-        # if thing:
             return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))
         return np.hstack((phi0, phi_kernel))
 
-    def sigmoid(self,y):
-        return 1/(1+np.exp(-y))
+    def sigmoid(self, y):
+        return 1 / (1 + np.exp(-y))
 
     # Formula 1
     def y_function(self, weight, phi):
-        y = self.sigmoid(np.dot(phi, weight)) 
+        y = self.sigmoid(np.dot(phi, weight))
         return y
 
     # Formula 24
@@ -195,19 +193,18 @@ class RVM_Classifier:
 
         self.phi = np.delete(self.phi, index, 1)
         self.weight = np.delete(self.weight, index)
-        self.alphas = np.delete(prune_alpha, index, 1)[0,:]
-        self.alphas_old = np.delete(prune_alpha_old, index, 1)[0,:]
+        self.alphas = np.delete(prune_alpha, index, 1)[0, :]
+        self.alphas_old = np.delete(prune_alpha_old, index, 1)[0, :]
 
         # if not self.removed_bias:
         #     self.relevance_vector = self.relevance_vector[index[1:]]
         # else:
         #     self.relevance_vector = self.relevance_vector[index]
         self.relevance_vector = np.delete(self.relevance_vector, index, 0)
-        ok =1
+        ok = 1
         # if not index[0] == [] and not self.removed_bias:
         #     self.removed_bias = True
         # print("Bias removed")
-
 
     # This function needs to be changed
     def prune(self):
@@ -230,22 +227,51 @@ class RVM_Classifier:
             self.removed_bias = True
             print("Bias removed")
 
+    def get_pruning_info(self):
+        alphas_checked = (self.alphas < self.threshold_alpha).tolist()
+        nr_to_prune = alphas_checked.count(False)
 
+        index_pos = 0
+        indexes = []
+        for i in range(nr_to_prune):
+            pos = alphas_checked.index(False, index_pos)
+            indexes.append(pos)
+            index_pos = pos + 1
+            # if not self.removed_bias and pos==0:
+            #     Todo finish the last thing
+
+        bias_removed = False
+        if not alphas_checked[0]:
+            bias_removed = True
+        return indexes, bias_removed, alphas_checked
+
+    def prune_john_madafackaa(self):
+        indexes, bias_removed, alphas_checked = self.get_pruning_info()
+        self.alphas = np.delete(self.alphas, indexes)
+        self.alphas_old = np.delete(self.alphas_old, indexes)
+        self.phi = np.delete(self.phi, indexes, 1)
+        self.weight = np.delete(self.weight, indexes)
+
+        if not self.removed_bias:
+            a = [x - 1 for x in indexes]
+            self.relevance_vector = np.delete(self.relevance_vector, a, 0)
+        else:
+            self.relevance_vector = np.delete(self.relevance_vector, indexes, 0)
+
+        if bias_removed and not self.removed_bias:
+            self.removed_bias = True
+            print("Bias removed")
 
     def fit(self):
         """
             Train the classifier
         """
-        
+
         self.relevance_vector = self.training_data
         self.phi = self.phi_function(self.training_data, self.training_data)
 
-        # Initialize uniformly
-        #self.alphas = 1e-6 *np.ones((self.training_data.shape[0] + 1))
         self.alphas = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
-        #self.weight = np.zeros((self.training_data.shape[0] + 1))
         self.weight = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
-        
 
         max_training_iterations = 1000
         threshold = 1e-3
@@ -260,7 +286,8 @@ class RVM_Classifier:
             gammas = self.gamma_function(self.alphas, sigma)
             self.alphas = self.recalculate_alphas_function(gammas, self.weight)
 
-            self.prune()
+            # self.prune()
+            self.prune_john_madafackaa()  # The time og John is here
 
             difference = np.amax(np.abs(self.alphas - self.alphas_old))  # Need to change this
             if difference < threshold:
@@ -313,10 +340,10 @@ class RVM_Classifier:
         colors = ["rx", "bx"]
         plt.figure(figsize=(12, 6))
         plt.title('')
-        plt.contour(xx, yy, Z, cmap= plt.get_cmap('Greys'))
+        plt.contour(xx, yy, Z, cmap=plt.get_cmap('Greys'))
         for i, c in enumerate(data_index_target_list):
             plt.plot(data[c[1], 0], data[c[1], 1], colors[i], label="Target: " + str(c[0]))
-        plt.scatter(self.relevance_vector[:, 0], self.relevance_vector[:, 1], c='black', marker = 'o', s=80, alpha=0.5)
+        plt.scatter(self.relevance_vector[:, 0], self.relevance_vector[:, 1], c='black', marker='o', s=80, alpha=0.5)
         plt.xlabel("")
         plt.ylabel("")
         plt.legend()
@@ -324,7 +351,6 @@ class RVM_Classifier:
         plt.gca().spines["top"].set_visible(False)
         plt.gca().spines["right"].set_visible(False)
         plt.show()
-
 
     def get_prediction_error_rate(self, predicted_targets=[], true_targets=[], use_predefined_training=False):
         if predicted_targets == [] and true_targets == []:
