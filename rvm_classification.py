@@ -268,9 +268,15 @@ class RVM_Classifier:
             else:
                 data = self.test_data
 
-        phi = self.phi_function(data, self.relevance_vector)
-        y = self.y_function(self.weight, phi)
-        pred = np.where(y > 0.5, 1, 0)
+        y_list = []
+        for k in range(self.n_classes):
+            phi = self.phi_function(data, self.relevance_vector[k], k)
+            #y = self.y_function(self.weight, phi)
+            y_list.append((self.y_function(self.weight[k], phi)).tolist())
+        pred = []
+        for sample in range(len(y_list)):
+            pred.append(y_list[sample].index(max(y_list[sample])))
+
         self.prediction = pred
         return pred
 
