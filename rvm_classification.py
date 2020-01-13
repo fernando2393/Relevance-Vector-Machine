@@ -32,6 +32,7 @@ class RVM_Classifier:
         self.training_labels = None
         self.test_data = None
         self.test_labels = None
+        self.n_classes = None
 
         # The prediction is stored here
         self.prediction = None
@@ -86,6 +87,10 @@ class RVM_Classifier:
                                                                               nr_samples)
             self.test_data = random_test_data
             self.test_labels = random_test_target
+    
+    def multi_class_transformation(self, labels):
+        labels = pd.get_dummies(labels).values
+        return labels
 
     def get_nr_random_samples(self, data, target, nr_samples):
         total_nr_samples = data.shape[0]
@@ -150,23 +155,26 @@ class RVM_Classifier:
 
     # Formula 24
     def log_posterior_function(self, weight, alpha, phi, target):
-        y = self.y_function(weight, phi)
-
-        sum_y = np.zeros(2)
-        y_1 = y[target == 1]
-        sum_y[1] = np.sum(np.log(y_1))
-        y_0 = y[target == 0]
-        sum_y[0] = np.sum(np.log(1 - y_0))
-
-        log_posterior = sum_y[1] + sum_y[0] - (np.linalg.multi_dot([weight.T, np.diag(alpha), weight]) / 2)
-        jacobian = np.dot(np.diag(alpha), weight) - np.dot(phi.T, (target - y))
-
+        log_posterior = 0
+        jacobian = []
+        for k in range(self.n_classes):
+            y = self.y_function(weight, phi)
+            log_likehood_term = np.sum(target[:,k] * np.log(y))
+            prior_term = np.dot(np.dot(weight.T, np.diag(alpha)), weight)
+            log_posterior += log_likehood_term - prior_term / 2
+            likelihood_jacobian = np.dot(phi.T, (target[:,k] - np.dot(target[:,k], y))) 
+            prior_jacobian = np.dot(np.diag(alpha), weight)
+            jacobian.append(prior_jacobian - likelihood_jacobian)
+        jacobian = np.sum(jacobian, axis =0)
         return -log_posterior, jacobian
 
     def hessian(self, weights, alphas, phi, target):
         y = self.y_function(weights, phi)
         beta = self.beta_matrix_function(y)
-        return np.diag(alphas) + np.linalg.multi_dot([phi.T, beta, phi])
+        hessian = np.zeros((np.diag(alphas).shape[0], np.diag(alphas).shape[0]))
+        for k in range(self.n_classes):
+            hessian += np.diag(alphas) + np.linalg.multi_dot([phi.T, target[:k*beta, phi])
+        return hessian
 
     def update_weights(self):
         result = minimize(
@@ -220,7 +228,8 @@ class RVM_Classifier:
         """
             Train the classifier
         """
-
+        self.training_labels = self.multi_class_transformation(self.training_labels)
+        self.n_classes = self.training_labels.shape[1]
         self.relevance_vector = self.training_data
         self.phi = self.phi_function(self.training_data, self.training_data)
 
