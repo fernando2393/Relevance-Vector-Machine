@@ -9,14 +9,15 @@ from tqdm import tqdm
 import Kernel
 
 
-class RVM_Classifier:
+class RVM_Classifier(object):
     """
         Relevance vector machine classifier
     """
 
-    def __init__(self):
+    def __init__(self, r):
 
         self.threshold_alpha = 1e9
+        self.r = r
 
         # If the bias is pruned we set this to True
         self.removed_bias = False
@@ -86,6 +87,9 @@ class RVM_Classifier:
                                                                               nr_samples)
             self.test_data = random_test_data
             self.test_labels = random_test_target
+            
+    def saving_dataset(self):
+        return self.training_data, self.training_labels, self.test_data, self.test_labels
 
     def get_nr_random_samples(self, data, target, nr_samples):
         total_nr_samples = data.shape[0]
@@ -114,14 +118,6 @@ class RVM_Classifier:
 
     # Formula 26. With alpha from below 13
     def sigma_function(self, phi, beta, alpha):
-        """for banana data 1 using:
-           1e-4 gets over 300 relevance vector,
-           1e-3 we get 13
-           1e-2 we get 9
-           1e-1 we get 244
-           This values might change for each data set, do not know what to do :(
-       for me it makes sense to use 1e-3 because we do not want value that big that might interfere in the sigma computation, and to small is shit.
-       another option is to reduce the threshold and use 1e11 instead of 1e12or even 1e9"""
         hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
         return np.linalg.inv(hessian)# +np.eye(len(alpha))*1e-9)
 
@@ -131,10 +127,7 @@ class RVM_Classifier:
 
     # From under formula 4
     def phi_function(self, x, y):
-        phi_kernel = Kernel.gaussian_kernel(x, y, r=None)
-        """ there is a difference when estimating for the ripleys and the other data sets. 
-        For kernel, in the paper, it is said that we should use r^2, where r=0.5. However, another interpretation is that r^2 = 0.5, in this case, our input must be sqrt(0.5).
-        Seems a little bit off for me :("""
+        phi_kernel = Kernel.gaussian_kernel(x, y, r=self.r)
         if self.removed_bias:
             return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))
@@ -143,7 +136,6 @@ class RVM_Classifier:
     def sigmoid(self, y):
         return 1 / (1 + np.exp(-y))
 
-    # Formula 1
     def y_function(self, weight, phi):
         y = self.sigmoid(np.dot(phi, weight))
         return y
@@ -234,6 +226,7 @@ class RVM_Classifier:
 
             self.update_weights()
             y = self.y_function(self.weight, self.phi)
+    
             beta = self.beta_matrix_function(y)
             sigma = self.sigma_function(self.phi, beta, self.alphas)
 
@@ -256,7 +249,9 @@ class RVM_Classifier:
                 data = self.test_data
 
         phi = self.phi_function(data, self.relevance_vector)
-        y = self.y_function(self.weight, phi)
+        y = np.dot(phi,self.weight)
+        # if np.max(y) > 1:
+        #     print("AAAAAAAAAAAAAAAAAAAAAAA STOP STOP AAAAAAAAAAAAAAAA")
         pred = np.where(y > 0.5, 1, 0)
         self.prediction = pred
         return pred
@@ -295,9 +290,9 @@ class RVM_Classifier:
         plt.figure(figsize=(12, 6))
         plt.title('')
         plt.contour(xx, yy, Z, cmap=plt.get_cmap('Greys'))
+        plt.scatter(self.relevance_vector[:, 0], self.relevance_vector[:, 1], c='black', marker='o', s=80, alpha=0.5)
         for i, c in enumerate(data_index_target_list):
             plt.plot(data[c[1], 0], data[c[1], 1], colors[i], label="Target: " + str(c[0]))
-        plt.scatter(self.relevance_vector[:, 0], self.relevance_vector[:, 1], c='black', marker='o', s=80, alpha=0.5)
         plt.xlabel("")
         plt.ylabel("")
         plt.legend()
