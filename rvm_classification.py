@@ -55,9 +55,9 @@ class RVM_Classifier:
             self.test_labels = data[:, -1]
         elif data_set == "usps":
             data = np.loadtxt("datasets/usps/usps.train")
-            X = data[:,1:]
-            y = data[:,0]
-            self.training_data , self.test_data, self.training_labels, self.test_labels = train_test_split(X, y, test_size=0.5, random_state=42)
+            X = data[:1000,1:]
+            y = data[:1000,0]
+            self.training_data , self.test_data, self.training_labels, self.test_labels = train_test_split(X, y, test_size=0.33, random_state=42)
         elif data_set == "ripley":
             self.training_data = np.loadtxt("datasets/ripley/ripley_train_data.asc")
             self.training_labels = np.loadtxt("datasets/ripley/ripley_train_labels.asc")
@@ -133,7 +133,7 @@ class RVM_Classifier:
        for me it makes sense to use 1e-3 because we do not want value that big that might interfere in the sigma computation, and to small is shit.
        another option is to reduce the threshold and use 1e11 instead of 1e12or even 1e9"""
         hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
-        return np.linalg.inv(hessian)  # +np.eye(len(alpha))*1e-1)
+        return np.linalg.inv(hessian)
 
     # From under formula 25
     def beta_matrix_function(self, y):
@@ -167,9 +167,8 @@ class RVM_Classifier:
         sum_y[1] = np.sum(np.log(y_1))
         y_0 = y[target == 0]
         sum_y[0] = np.sum(np.log(1 - y_0))
-        term_aux = np.dot(weight.T, np.diag(alpha))
-        term = np.dot(term_aux, weight) / 2
-        log_posterior = sum_y[1] + sum_y[0] - term
+
+        log_posterior = sum_y[1] + sum_y[0] - (np.linalg.multi_dot([weight.T, np.diag(alpha), weight]) / 2)
         jacobian = np.dot(np.diag(alpha), weight) - np.dot(phi.T, (target - y))
 
         return -log_posterior, jacobian
@@ -177,7 +176,7 @@ class RVM_Classifier:
     def hessian(self, weights, alphas, phi, target):
         y = self.y_function(weights, phi)
         beta = self.beta_matrix_function(y)
-        return np.diag(alphas) + np.linalg.multi_dot([phi.T, beta, phi])
+        return np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alphas)
 
     def update_weights(self, k):
         result = minimize(
@@ -247,12 +246,12 @@ class RVM_Classifier:
         threshold = 1e-3
         convergence_criteria = [False]*self.n_classes
         for i in tqdm(range(max_training_iterations)):
-            # if not False in convergence_criteria:       # If no False in list then all k has converged
-            #     print("Training done, it converged. Nr iterations: " + str(i + 1))
-                # break
+            if not False in convergence_criteria:       # If no False in list then all k has converged
+                print("Training done, it converged. Nr iterations: " + str(i + 1))
+                break
             for k in range(self.n_classes):
-                # if (convergence_criteria[k] == True):
-                #     continue
+                if (convergence_criteria[k] == True):
+                    continue
                 self.update_weights(k)
                 y = self.y_function(self.weight[k], self.phi[k])
                 beta = self.beta_matrix_function(y)
