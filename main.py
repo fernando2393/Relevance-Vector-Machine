@@ -3,7 +3,7 @@ import rvm_classification
 relevance_vectors = []
 errors = []
 nr_iterations = 1
-data_set = "image"
+data_set = "titanic"
 for i in range(nr_iterations):
     print("data_set {n}".format(n=i))
     rvc = rvm_classification.RVM_Classifier()
