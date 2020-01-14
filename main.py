@@ -3,7 +3,7 @@ import rvm_classification
 relevance_vectors = []
 errors = []
 nr_iterations = 1
-data_set = "titanic"
+data_set = "usps"
 for i in range(nr_iterations):
     rvc = rvm_classification.RVM_Classifier()
     rvc.set_predefined_training_data(data_set, data_set_index=i + 1)

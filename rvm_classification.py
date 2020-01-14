@@ -5,6 +5,7 @@ import pandas as pd
 from scipy.optimize import minimize
 from tqdm import tqdm
 import Kernel
+from sklearn.model_selection import train_test_split
 
 class RVM_Classifier:
     """
@@ -53,7 +54,10 @@ class RVM_Classifier:
             self.test_data = data[:, :-1]
             self.test_labels = data[:, -1]
         elif data_set == "usps":
-            raise NameError("This data set is not yet supported")
+            data = np.loadtxt("datasets/usps/usps.train")
+            X = data[:,1:]
+            y = data[:,0]
+            self.training_data , self.test_data, self.training_labels, self.test_labels = train_test_split(X, y, test_size=0.5, random_state=42)
         elif data_set == "ripley":
             self.training_data = np.loadtxt("datasets/ripley/ripley_train_data.asc")
             self.training_labels = np.loadtxt("datasets/ripley/ripley_train_labels.asc")
@@ -104,7 +108,11 @@ class RVM_Classifier:
         return random_data, random_target
 
     def get_nr_relevance_vectors(self):
-        return self.relevance_vector.shape[0]
+        nr_vectors = self.relevance_vector[0]
+        for i in range(1, self.relevance_vector.shape[0]):
+            np.concatenate((nr_vectors, self.relevance_vector[i]), axis=None)
+        len = np.unique(nr_vectors).shape[0]
+        return len
 
     # From formula 16
     def recalculate_alphas_function(self, gamma, weights):
@@ -235,16 +243,16 @@ class RVM_Classifier:
             self.weight[k] = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
 
         self.alphas_old = np.copy(self.alphas)
-        max_training_iterations = 1000
+        max_training_iterations = 50
         threshold = 1e-3
         convergence_criteria = [False]*self.n_classes
         for i in tqdm(range(max_training_iterations)):
-            if not False in convergence_criteria:       # If no False in list then all k has converged
-                print("Training done, it converged. Nr iterations: " + str(i + 1))
-                break
+            # if not False in convergence_criteria:       # If no False in list then all k has converged
+            #     print("Training done, it converged. Nr iterations: " + str(i + 1))
+                # break
             for k in range(self.n_classes):
-                if (convergence_criteria[k] == True):
-                    continue
+                # if (convergence_criteria[k] == True):
+                #     continue
                 self.update_weights(k)
                 y = self.y_function(self.weight[k], self.phi[k])
                 beta = self.beta_matrix_function(y)
@@ -271,8 +279,8 @@ class RVM_Classifier:
         y_list = []
         for k in range(self.n_classes):
             phi = self.phi_function(data, self.relevance_vector[k], k)
-            #y = self.y_function(self.weight, phi)
             y_list.append((self.y_function(self.weight[k], phi)).tolist())
+        y_list = list(map(list, zip(*y_list)))
         pred = []
         for sample in range(len(y_list)):
             pred.append(y_list[sample].index(max(y_list[sample])))
