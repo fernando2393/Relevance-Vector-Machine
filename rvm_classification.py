@@ -136,7 +136,6 @@ class RVM_Classifier(object):
     def sigmoid(self, y):
         return 1 / (1 + np.exp(-y))
 
-    # Formula 1
     def y_function(self, weight, phi):
         y = self.sigmoid(np.dot(phi, weight))
         return y
@@ -227,6 +226,7 @@ class RVM_Classifier(object):
 
             self.update_weights()
             y = self.y_function(self.weight, self.phi)
+    
             beta = self.beta_matrix_function(y)
             sigma = self.sigma_function(self.phi, beta, self.alphas)
 
@@ -250,6 +250,8 @@ class RVM_Classifier(object):
 
         phi = self.phi_function(data, self.relevance_vector)
         y = np.dot(phi,self.weight)
+        # if np.max(y) > 1:
+        #     print("AAAAAAAAAAAAAAAAAAAAAAA STOP STOP AAAAAAAAAAAAAAAA")
         pred = np.where(y > 0.5, 1, 0)
         self.prediction = pred
         return pred

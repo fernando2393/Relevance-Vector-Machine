@@ -7,15 +7,15 @@ support_vectors = []
 rvm_error = []
 svm_error = []
 
+r = None # None
+gamma = "auto" # "auto"
 
-gamma = 0.5 # "auto"
-r = 0.5 # None
-nr_iterations = 1
-data_set = "ripley"
+nr_iterations = 10
+data_set = "titanic"
 for i in range(nr_iterations):
-    print("data_set {n}".format(n=(i+1)))
+    print("\n data_set {n}".format(n=(i+1)))
     rvc = rvm_classification.RVM_Classifier(r)
-    rvc.set_predefined_training_data(data_set, data_set_index=i + 1, nr_samples=100)
+    rvc.set_predefined_training_data(data_set, data_set_index=i + 1)
     rvc.fit()
     prediction = rvc.predict(use_predefined_training=False)
     rvm_error.append(rvc.get_prediction_error_rate(use_predefined_training=False))
