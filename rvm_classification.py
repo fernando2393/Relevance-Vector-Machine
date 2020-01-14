@@ -127,7 +127,7 @@ class RVM_Classifier(object):
 
     # From under formula 4
     def phi_function(self, x, y):
-        phi_kernel = Kernel.spherical(x, y, r=None)
+        phi_kernel = Kernel.gaussian_kernel(x, y, r=None)
         if self.removed_bias:
             return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))

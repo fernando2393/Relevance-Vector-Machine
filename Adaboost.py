@@ -50,7 +50,7 @@ X = np.array(data[range(len(columns)-2)])
 training_data, test_data, training_labels, test_labels = train_test_split(X, y, test_size=0.5, random_state=42)
 
 # SVM Classification
-clf = svm.SVC(probability=True, kernel=Kernel.spherical)
+clf = svm.SVC(probability=True, kernel=Kernel.combination_spherical_t_student_kernel)
 clf.fit(training_data, training_labels)
 predictions = clf.predict(test_data)
 print("Normal SVM error is:\t", calculateErrorRate(np.array(predictions), np.array(test_labels)))

@@ -13,14 +13,14 @@ def generalized_t_student_kernel(X, Y):
     compute_kernel = 1 / (1 - pow(euclidean_distances(X_aux, Y_aux, squared=True), d))
     return compute_kernel
 
-def spherical(X, Y, r=None):
+def combination_spherical_t_student_kernel(X, Y, r=None):
     if r is None:
         r = X.shape[1]
-    compute_kernel = 1 - (3/2) * euclidean_distances(X, Y) / r + (1/2) * pow(euclidean_distances(X, Y) / r, 3)
+    compute_kernel = 1 - (3/2) * euclidean_distances(X, Y) / r + (1/2) * pow(euclidean_distances(X, Y) / r, 3) # Spherical
     d = X.shape[0]
     X_aux = abs(X)
     Y_aux = abs(Y)
-    compute_kernel += 1 / (1 - pow(euclidean_distances(X_aux, Y_aux, squared=True), d))
+    compute_kernel += 1 / (1 - pow(euclidean_distances(X_aux, Y_aux, squared=True), d)) # General T-Student
     return compute_kernel
 
 
