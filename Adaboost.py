@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 import rvm_classification
+import Kernel
 
 def calculateErrorRate(pred_labels, real_labels):
     cnt = 0
@@ -14,7 +15,7 @@ def calculateErrorRate(pred_labels, real_labels):
             cnt += 1
     return cnt / len(real_labels)
 
-data_set = "banknote"
+data_set = "ctg"
 data_set_index = 1
 """
 training_data = np.loadtxt(
@@ -40,7 +41,7 @@ training_data, test_data, training_labels, test_labels = train_test_split(X, y, 
 """
 
 
-data = pd.read_csv("datasets/banknote/banknote.csv", delimiter=";", header=None)
+data = pd.read_csv("datasets/ctg/ctg.csv", delimiter=";", header=None)
 data = pd.DataFrame(data)
 columns = data.columns.tolist()
 y = np.array(data[len(columns)-1])
@@ -49,7 +50,7 @@ X = np.array(data[range(len(columns)-2)])
 training_data, test_data, training_labels, test_labels = train_test_split(X, y, test_size=0.5, random_state=42)
 
 # SVM Classification
-clf = svm.SVC(probability=True, kernel='linear')
+clf = svm.SVC(probability=True, kernel=Kernel.spherical)
 clf.fit(training_data, training_labels)
 predictions = clf.predict(test_data)
 print("Normal SVM error is:\t", calculateErrorRate(np.array(predictions), np.array(test_labels)))

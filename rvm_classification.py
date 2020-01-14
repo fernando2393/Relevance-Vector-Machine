@@ -119,7 +119,7 @@ class RVM_Classifier(object):
     # Formula 26. With alpha from below 13
     def sigma_function(self, phi, beta, alpha):
         hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
-        return np.linalg.inv(hessian)# +np.eye(len(alpha))*1e-9)
+        return np.linalg.inv(hessian + np.eye(len(alpha))*1e-9)# +np.eye(len(alpha))*1e-9)
 
     # From under formula 25
     def beta_matrix_function(self, y):
@@ -127,7 +127,7 @@ class RVM_Classifier(object):
 
     # From under formula 4
     def phi_function(self, x, y):
-        phi_kernel = Kernel.gaussian_kernel(x, y, r=self.r)
+        phi_kernel = Kernel.spherical(x, y, r=None)
         if self.removed_bias:
             return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))
