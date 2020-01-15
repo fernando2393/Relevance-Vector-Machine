@@ -5,8 +5,8 @@ import numpy as np
 
 relevance_vectors = []
 errors = []
-nr_iterations = 2
-data_set = "images"
+nr_iterations = 10
+data_set = "usps"
 usps_predictions = []
 rvc = rvm_classification.RVM_Classifier()
 rvc.set_usps_data()

@@ -128,9 +128,9 @@ class RVM_Classifier:
         return random_data, random_target
 
     def get_nr_relevance_vectors(self):
-        nr_vectors = self.relevance_vector[0]
+        nr_vectors = self.relevance_vector[0][:,0]
         for i in range(1, self.relevance_vector.shape[0]):
-            np.concatenate((nr_vectors, self.relevance_vector[i]), axis=None)
+            np.concatenate((nr_vectors, self.relevance_vector[i][:,0]), axis=None)
         len = np.unique(nr_vectors).shape[0]
         return len
 
@@ -247,13 +247,13 @@ class RVM_Classifier:
         self.weight = np.full(self.n_classes, None)
         
         for k in range(self.n_classes):
-            self.relevance_vector[k] = self.training_data
+            self.relevance_vector[k] = list(enumerate(self.training_data))
             self.phi[k] = self.phi_function(self.training_data, self.training_data, k)
             self.alphas[k] = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
             self.weight[k] = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
 
         self.alphas_old = np.copy(self.alphas)
-        max_training_iterations = 2
+        max_training_iterations = 100
         threshold = 1e-3
         convergence_criteria = [False]*self.n_classes
         for i in tqdm(range(max_training_iterations)):
@@ -288,7 +288,7 @@ class RVM_Classifier:
 
         y_list = []
         for k in range(self.n_classes):
-            phi = self.phi_function(data, self.relevance_vector[k], k)
+            phi = self.phi_function(data, self.relevance_vector[k][:,1].tolist(), k)
             y_list.append(np.dot(phi, self.weight[k]).tolist())
         y_list = list(map(list, zip(*y_list)))
         pred = []
@@ -334,7 +334,7 @@ class RVM_Classifier:
         plt.contour(xx, yy, Z, cmap=plt.get_cmap('Greys'))
         for i, c in enumerate(data_index_target_list):
             plt.plot(data[c[1], 0], data[c[1], 1], colors[i], label="Target: " + str(c[0]))
-        plt.scatter(self.relevance_vector[:, 0], self.relevance_vector[:, 1], c='black', marker='o', s=80, alpha=0.5)
+        plt.scatter(self.relevance_vector[:, 0][1], self.relevance_vector[:, 1][1], c='black', marker='o', s=80, alpha=0.5)
         plt.xlabel("")
         plt.ylabel("")
         plt.legend()
