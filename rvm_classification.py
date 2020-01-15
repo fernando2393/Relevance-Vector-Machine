@@ -120,20 +120,12 @@ class RVM_Classifier:
 
     # From formula after 16 before 18 (17)
     def gamma_function(self, alpha, sigma):
-        return 1 - np.dot(alpha, np.diag(sigma))
+        return 1 - alpha * np.diag(sigma)
 
     # Formula 26. With alpha from below 13
     def sigma_function(self, phi, beta, alpha):
-        """for banana data 1 using:
-           1e-4 gets over 300 relevance vector,
-           1e-3 we get 13
-           1e-2 we get 9
-           1e-1 we get 244
-           This values might change for each data set, do not know what to do :(
-       for me it makes sense to use 1e-3 because we do not want value that big that might interfere in the sigma computation, and to small is shit.
-       another option is to reduce the threshold and use 1e11 instead of 1e12or even 1e9"""
         hessian = np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alpha)
-        return np.linalg.inv(hessian)
+        return np.linalg.inv(hessian + np.eye(len(alpha))*1e-9)
 
     # From under formula 25
     def beta_matrix_function(self, y):
@@ -141,10 +133,7 @@ class RVM_Classifier:
 
     # From under formula 4
     def phi_function(self, x, y, k):
-        phi_kernel = Kernel.gaussian_kernel(x, y, r=np.sqrt(0.5))
-        """ there is a difference when estimating for the ripleys and the other data sets. 
-        For kernel, in the paper, it is said that we should use r^2, where r=0.5. However, another interpretation is that r^2 = 0.5, in this case, our input must be sqrt(0.5).
-        Seems a little bit off for me :("""
+        phi_kernel = Kernel.gaussian_kernel(x, y, r=None)
         if self.removed_bias[k]:
             return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))
@@ -153,7 +142,6 @@ class RVM_Classifier:
     def sigmoid(self, y):
         return 1 / (1 + np.exp(-y))
 
-    # Formula 1
     def y_function(self, weight, phi):
         y = self.sigmoid(np.dot(phi, weight))
         return y
@@ -176,7 +164,7 @@ class RVM_Classifier:
     def hessian(self, weights, alphas, phi, target):
         y = self.y_function(weights, phi)
         beta = self.beta_matrix_function(y)
-        return np.linalg.multi_dot([phi.T, beta, phi]) + np.diag(alphas)
+        return np.diag(alphas) + np.linalg.multi_dot([phi.T, beta, phi])
 
     def update_weights(self, k):
         result = minimize(
@@ -203,24 +191,27 @@ class RVM_Classifier:
             indexes.append(pos)
             index_pos = pos + 1
 
-        if not alphas_checked[0] and not self.removed_bias[k]:
-            self.removed_bias[k] = True
-            # print("Removed Bias")
-
-        return indexes, alphas_checked
+        bias_removed = False
+        if not alphas_checked[0]:
+            bias_removed = True
+        return indexes, bias_removed, alphas_checked
 
     def prune(self, k):
-        indexes, alphas_checked = self.get_pruning_info(k)
+        indexes, bias_removed, alphas_checked = self.get_pruning_info(k)
         self.alphas[k] = np.delete(self.alphas[k], indexes, 0)
         self.alphas_old[k] = np.delete(self.alphas_old[k], indexes, 0)
         self.phi[k] = np.delete(self.phi[k], indexes, 1)
         self.weight[k] = np.delete(self.weight[k], indexes, 0)
 
         if not self.removed_bias[k]:
-            bias_check = [x - 1 for x in indexes]  # Produces annoying warning
+            bias_check = (np.array(indexes) - 1).tolist()  # Produces annoying warning
             self.relevance_vector[k] = np.delete(self.relevance_vector[k], bias_check, 0)
         else:
             self.relevance_vector[k] = np.delete(self.relevance_vector[k], indexes, 0)
+
+        if bias_removed and not self.removed_bias[k]:
+            self.removed_bias[k] = True
+            print("Bias removed")
 
     def fit(self):
         """
@@ -246,6 +237,7 @@ class RVM_Classifier:
         threshold = 1e-3
         convergence_criteria = [False]*self.n_classes
         for i in tqdm(range(max_training_iterations)):
+            self.alphas_old = self.alphas
             if not False in convergence_criteria:       # If no False in list then all k has converged
                 print("Training done, it converged. Nr iterations: " + str(i + 1))
                 break
@@ -257,7 +249,7 @@ class RVM_Classifier:
                 beta = self.beta_matrix_function(y)
                 sigma = self.sigma_function(self.phi[k], beta, self.alphas[k])
 
-                gammas = self.gamma_function(self.alphas[k], sigma[k])
+                gammas = self.gamma_function(self.alphas[k], sigma)
                 self.alphas[k] = self.recalculate_alphas_function(gammas, self.weight[k])
 
                 self.prune(k)
@@ -266,7 +258,6 @@ class RVM_Classifier:
                 if difference < threshold:
                     print("k: " + str(k) + " converged. Nr iterations: " + str(i + 1))
                     convergence_criteria[k] = True
-                self.alphas_old[k] = self.alphas[k]
 
     def predict(self, data=[], use_predefined_training=False):
         if data == []:
