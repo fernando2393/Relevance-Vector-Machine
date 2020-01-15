@@ -36,10 +36,26 @@ class RVM_Classifier:
         # The prediction is stored here
         self.prediction = None
 
+        # For multi class instance of usps
+        self.usps_training_data = None
+        self.usps_training_labels = None
+
+    def set_prediction_usps(self, prediction):
+        self.prediction = prediction
+
     def set_training_data(self, training_data, training_labels):
         self.training_data = training_data
         self.training_labels = training_labels
         self.training_labels[self.training_labels == -1] = 0  # Sanitize labels, some use -1 so we force it to 0
+
+    def set_usps_data(self):
+        data = np.loadtxt("datasets/usps/usps.train")
+        X = data[:,1:]
+        y = data[:,0]
+        nr_chunks = 10
+        training_data , self.test_data, training_labels, self.test_labels = train_test_split(X, y, test_size=0.2754, random_state=42)
+        self.usps_training_data = np.split(training_data, nr_chunks)
+        self.usps_training_labels = np.split(training_labels, nr_chunks)
 
     def set_predefined_training_data(self, data_set, data_set_index=1, nr_samples=None):
         if data_set == "pima":
@@ -58,12 +74,10 @@ class RVM_Classifier:
             iris = datasets.load_iris()
             X = iris.data[:, :2]  # we only take the first two features.
             y = iris.target
-            self.training_data , self.test_data, self.training_labels, self.test_labels = train_test_split(X, y, test_size=0.2, random_state=42)
+            self.training_data , self.test_data, self.training_labels, self.test_labels = train_test_split(X, y, test_size=0.275, random_state=42)
         elif data_set == "usps":
-            data = np.loadtxt("datasets/usps/usps.train")
-            X = data[:,1:]
-            y = data[:,0]
-            self.training_data , self.test_data, self.training_labels, self.test_labels = train_test_split(X, y, test_size=0.2, random_state=42)
+            self.training_data = self.usps_training_data[data_set_index-1]
+            self.training_labels = self.usps_training_labels[data_set_index-1]
         elif data_set == "ripley":
             self.training_data = np.loadtxt("datasets/ripley/ripley_train_data.asc")
             self.training_labels = np.loadtxt("datasets/ripley/ripley_train_labels.asc")
@@ -239,7 +253,7 @@ class RVM_Classifier:
             self.weight[k] = np.array([1 / (self.training_data.shape[0] + 1)] * (self.training_data.shape[0] + 1))
 
         self.alphas_old = np.copy(self.alphas)
-        max_training_iterations = 50
+        max_training_iterations = 2
         threshold = 1e-3
         convergence_criteria = [False]*self.n_classes
         for i in tqdm(range(max_training_iterations)):
