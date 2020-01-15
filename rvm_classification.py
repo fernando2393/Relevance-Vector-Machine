@@ -6,6 +6,7 @@ from scipy.optimize import minimize
 from tqdm import tqdm
 import Kernel
 from sklearn.model_selection import train_test_split
+from sklearn import datasets
 
 class RVM_Classifier:
     """
@@ -53,11 +54,16 @@ class RVM_Classifier:
             data = data_test.values
             self.test_data = data[:, :-1]
             self.test_labels = data[:, -1]
+        elif data_set == "iris":
+            iris = datasets.load_iris()
+            X = iris.data[:, :2]  # we only take the first two features.
+            y = iris.target
+            self.training_data , self.test_data, self.training_labels, self.test_labels = train_test_split(X, y, test_size=0.2, random_state=42)
         elif data_set == "usps":
             data = np.loadtxt("datasets/usps/usps.train")
-            X = data[:1000,1:]
-            y = data[:1000,0]
-            self.training_data , self.test_data, self.training_labels, self.test_labels = train_test_split(X, y, test_size=0.33, random_state=42)
+            X = data[:,1:]
+            y = data[:,0]
+            self.training_data , self.test_data, self.training_labels, self.test_labels = train_test_split(X, y, test_size=0.2, random_state=42)
         elif data_set == "ripley":
             self.training_data = np.loadtxt("datasets/ripley/ripley_train_data.asc")
             self.training_labels = np.loadtxt("datasets/ripley/ripley_train_labels.asc")
@@ -133,7 +139,7 @@ class RVM_Classifier:
 
     # From under formula 4
     def phi_function(self, x, y, k):
-        phi_kernel = Kernel.gaussian_kernel(x, y, r=None)
+        phi_kernel = Kernel.gaussian_kernel(x, y)
         if self.removed_bias[k]:
             return phi_kernel
         phi0 = np.ones((phi_kernel.shape[0], 1))
@@ -237,7 +243,7 @@ class RVM_Classifier:
         threshold = 1e-3
         convergence_criteria = [False]*self.n_classes
         for i in tqdm(range(max_training_iterations)):
-            self.alphas_old = self.alphas
+            self.alphas_old = np.copy(self.alphas)
             if not False in convergence_criteria:       # If no False in list then all k has converged
                 print("Training done, it converged. Nr iterations: " + str(i + 1))
                 break
@@ -254,7 +260,7 @@ class RVM_Classifier:
 
                 self.prune(k)
 
-                difference = np.amax(np.abs(self.alphas[k] - self.alphas_old[k]))  # Need to change this
+                difference = np.amax(np.abs(self.alphas[k] - self.alphas_old[k]))
                 if difference < threshold:
                     print("k: " + str(k) + " converged. Nr iterations: " + str(i + 1))
                     convergence_criteria[k] = True
@@ -269,7 +275,7 @@ class RVM_Classifier:
         y_list = []
         for k in range(self.n_classes):
             phi = self.phi_function(data, self.relevance_vector[k], k)
-            y_list.append((self.y_function(self.weight[k], phi)).tolist())
+            y_list.append(np.dot(phi, self.weight[k]).tolist())
         y_list = list(map(list, zip(*y_list)))
         pred = []
         for sample in range(len(y_list)):

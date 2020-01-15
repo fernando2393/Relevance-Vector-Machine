@@ -25,12 +25,12 @@ def combination_spherical_t_student_kernel(X, Y, r=None):
 
 
 def linear_kernel(vector_x, vector_y):
-    return np.dot(vector_x, vector_y)
+    return np.dot(vector_x, vector_y.T)
 
 
 def polynomial_kernel(vector_x, vector_y):
     power = 2
-    return np.power(np.dot(vector_x, vector_y) + 1, power)
+    return np.power(np.dot(vector_x, vector_y.T) + 1, power)
 
 
 def gaussian_kernel(X, Y, r=None):
