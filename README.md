@@ -1,2 +1,3 @@
-# DD2434 Advanced Machine Learning Project
-Group project repo for the course DD2434 Advanced Machine Learning at KTH HT 2019.
+# DD2434 - Machine Learning Advanced: Final Project
+
+Final project of the KTH DD2434 - Machine Learning Advanced course.
